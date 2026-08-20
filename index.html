@@ -1468,15 +1468,19 @@ function showUnitDetail(unit) {
   const level = unit.level || getUnitLevel(unit.id);
   $('unit-detail-title').innerHTML = `第 ${unit.id} 单元 <span class="text-xs ${LEVEL_COLORS[level]} text-white px-2 py-0.5 rounded align-middle ml-1">${level}</span>`;
   $('unit-detail-subtitle').textContent = `${unit.title} · ${(unit.words || unit.items).length} 词`;
+  // 老单元用 fallback，新单元用内置字段
+  const fallback = getUnitStory(unit.id);
+  const storyIntro = unit.storyIntro || (fallback && fallback.storyIntro);
+  const mascotMessage = unit.mascotMessage || (fallback && fallback.mascotMessage);
   // 故事情景卡
-  const story = unit.storyIntro ? `
+  const story = storyIntro ? `
     <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 mb-3 border-2 border-purple-200">
       <div class="flex items-start gap-3">
         <div class="text-4xl bounce-in">${unit.emoji || '📖'}</div>
         <div class="flex-1">
           <div class="text-xs text-purple-600 font-bold mb-1">📖 今日故事</div>
-          <div class="text-sm text-gray-700 italic">"${unit.storyIntro}"</div>
-          ${unit.mascotMessage ? `<div class="text-xs text-orange-600 mt-2 font-bold">🦉 ${unit.mascotMessage}</div>` : ''}
+          <div class="text-sm text-gray-700 italic">"${storyIntro}"</div>
+          ${mascotMessage ? `<div class="text-xs text-orange-600 mt-2 font-bold">🦉 ${mascotMessage}</div>` : ''}
         </div>
       </div>
     </div>` : '';
@@ -2201,6 +2205,39 @@ function getUnitLevel(id) {
 }
 const LEVEL_COLORS = { A1: 'bg-green-500', A2: 'bg-blue-500', B1: 'bg-purple-500', B2: 'bg-orange-500' };
 const LEVEL_EMOJI = { A1: '🌱', A2: '🌿', B1: '🌳', B2: '🌟' };
+
+// 老单元(1-25)的情景小故事 fallback(新单元 26-50 已在 content.js 内置)
+const UNIT_STORIES = {
+  1: { storyIntro: "🦉 Búho Sabio 是只住在西语森林的魔法猫头鹰。今天它要带 5 个小元音 a/e/i/o/u 去见它们的「妈妈」！", mascotMessage: "我们从最基础的字母开始，像搭积木一样建起西语城堡！" },
+  2: { storyIntro: "👧 Mia 第一次去西语学校，她很紧张——不知道进门要先说什么。", mascotMessage: "别担心！学会几句问候，你就能交到很多新朋友啦。" },
+  3: { storyIntro: "🦕 10 只小恐龙要去参加派对，它们要数数自己到了几个。", mascotMessage: "西语的数字 1-10 跟英语不一样哦，要重新学一遍！" },
+  4: { storyIntro: "🎨 画家 Tom 有一盒神奇的彩笔，画什么颜色就变什么颜色！", mascotMessage: "颜色和形状，让世界变得五彩缤纷。" },
+  5: { storyIntro: "⏰ Tom 想约朋友明天 3 点去公园玩，他要在日历上找时间。", mascotMessage: "西语说时间跟中文完全不一样，学了你就懂！" },
+  6: { storyIntro: "👨‍👩‍👧 小 A 的家很热闹，10 口人住在一起。今天要拍全家福。", mascotMessage: "用西语介绍家人，让世界知道你的家庭！" },
+  7: { storyIntro: "🐻 小熊学跳舞，老师说：「Toca la cabeza」（摸头）！", mascotMessage: "身体部位学会，你就能描述哪里疼、哪里痒。" },
+  8: { storyIntro: "🍳 厨房里有魔法：番茄 + 鸡蛋 + 油 = 美味的蛋饼！", mascotMessage: "美食词汇，生活中天天用得上。" },
+  9: { storyIntro: "🍓 果园里 5 种水果排排坐，要做一碗五彩沙拉。", mascotMessage: "水果蔬菜词汇，是 A1 必学！" },
+  10: { storyIntro: "🦁 动物园里，每个动物都有自己的「名字」和「叫声」。", mascotMessage: "学会这些，下次去动物园可以跟西语小朋友聊！" },
+  11: { storyIntro: "👗 魔法衣橱要选一套去参加派对的衣服，怎么选？", mascotMessage: "衣物词汇，从头到脚都讲一遍。" },
+  12: { storyIntro: "🛋️ Tom 搬新家，要给每个房间选家具，客厅、卧室、厨房…", mascotMessage: "家居物品，让你能介绍自己的家。" },
+  13: { storyIntro: "🏙️ Pedro 在新城市迷路了，要找超市、邮局、医院…", mascotMessage: "城市地标，走遍西班牙都用得上。" },
+  14: { storyIntro: "🚂 怎么去海边？走路、骑车、坐地铁、坐飞机…", mascotMessage: "交通词汇，计划一次旅行！" },
+  15: { storyIntro: "🎒 第一天上学，走进教室，桌上有课本、铅笔、橡皮…", mascotMessage: "学校词汇，描述你的学习生活。" },
+  16: { storyIntro: "👨‍⚕️ 长大想做什么？医生、老师、宇航员…", mascotMessage: "职业词汇，未来你想做什么？" },
+  17: { storyIntro: "⚽ 周末运动会到了！足球、篮球、游泳…选一项参加！", mascotMessage: "运动词汇，强身健体！" },
+  18: { storyIntro: "🎮 Tom 的兴趣爱好卡片：弹钢琴、画画、打游戏…", mascotMessage: "爱好词汇，描述你的周末。" },
+  19: { storyIntro: "✨ 魔法形容词：加一个词，物品就变了——「grande」「pequeño」「bonito」…", mascotMessage: "形容词，让你的描述更生动！" },
+  20: { storyIntro: "☔ 今天的天气决定我们做什么：出太阳去公园，下雨在家看书…", mascotMessage: "天气词汇，每天都能用。" },
+  21: { storyIntro: "🏃 24 小时里要做什么？comer、estudiar、jugar、dormir…", mascotMessage: "常用动词，西语的核心。" },
+  22: { storyIntro: "🔗 Tom 在找东西，「en la mesa」（在桌上）、「debajo de la cama」（在床下）…", mascotMessage: "介词连词，让你的位置描述更准。" },
+  23: { storyIntro: "😊 今天 Tom 心情怎样？feliz、triste、enojado…写心情日记！", mascotMessage: "情感表达，让你能说出心里的感受。" },
+  24: { storyIntro: "🎄 跟着 Tom 环球旅行，看看世界各个节日怎么过！", mascotMessage: "节日文化，了解西班牙及其他国家的传统。" },
+  25: { storyIntro: "💬 应急短语卡：找不到厕所、听不懂、需要帮助…怎么用西语说？", mascotMessage: "常用短语，关键时刻能救你！" }
+};
+
+function getUnitStory(id) {
+  return UNIT_STORIES[id] || null;
+}
 
 function renderHome() {
   updateHomeStats();
