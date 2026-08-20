@@ -1807,10 +1807,16 @@ function renderStorySentence() {
       <button id="story-next" class="w-full btn-primary text-white font-bold py-3 px-4 rounded-2xl text-base opacity-50 cursor-not-allowed" disabled>
         ${isLast ? '开始答题 →' : '下一句 →'}
       </button>
+      <div class="text-center mt-2">
+        <button id="story-skip-initial" class="text-sm text-gray-400 underline hover:text-gray-600 py-1 px-2">
+          不想跟读？跳过这句 →
+        </button>
+      </div>
     </div>
   `;
   $('story-listen').addEventListener('click', () => speak(safeEs));
   $('story-record').addEventListener('click', () => startStoryRecording(s));
+  $('story-skip-initial').addEventListener('click', () => { storySentenceIdx++; renderStorySentence(); });
   // 自动播放 1 次
   setTimeout(() => speak(safeEs), 400);
 }
@@ -1874,8 +1880,9 @@ function startStoryRecording(s) {
         else if (err === 'not-allowed') msg = '请允许麦克风权限';
         else if (err === 'audio-capture') msg = '找不到麦克风';
         else if (typeof err === 'string' && err.includes('不支持')) msg = '你的浏览器不支持录音';
-        status.innerHTML = `<div class="bg-red-50 rounded-xl p-3"><div class="text-red-500 text-sm mb-2">⚠️ ${msg}</div><button id="story-retry" class="btn-primary text-white font-bold py-1 px-3 rounded-lg text-sm">重试</button></div>`;
+        status.innerHTML = `<div class="bg-red-50 rounded-xl p-3"><div class="text-red-500 text-sm mb-2">⚠️ ${msg}</div><div class="flex gap-2 justify-center"><button id="story-retry" class="btn-primary text-white font-bold py-1 px-3 rounded-lg text-sm">重试</button><button id="story-skip-err" class="btn-secondary font-bold py-1 px-3 rounded-lg text-sm">跳过</button></div></div>`;
         $('story-retry').addEventListener('click', () => { recordBtn.disabled = false; listenBtn.disabled = false; startStoryRecording(s); });
+        $('story-skip-err').addEventListener('click', () => { storySentenceIdx++; renderStorySentence(); });
       }
     );
   }, 1500);
@@ -2150,9 +2157,13 @@ function handlePronunciationRecord(item) {
       if (errorMsg) {
         fb.innerHTML = `
           <div class="text-orange-600 font-bold mb-2">⚠️ ${errorMsg}</div>
-          <button id="prn-retry" class="btn-primary px-4 py-2 rounded-xl font-bold">再试一次</button>
+          <div class="flex gap-2 justify-center">
+            <button id="prn-retry" class="btn-primary px-4 py-2 rounded-xl font-bold">再试一次</button>
+            <button id="prn-skip-err" class="btn-secondary px-4 py-2 rounded-xl font-bold">跳过</button>
+          </div>
         `;
         $('prn-retry').addEventListener('click', () => handlePronunciationRecord(item));
+        $('prn-skip-err').addEventListener('click', () => { prnItemIdx++; renderPronunciationItem(); });
         return;
       }
       const sim = similarity(transcript, item.text);
@@ -2263,12 +2274,18 @@ function renderConvLine() {
             <button id="conv-next" class="w-full btn-primary text-white font-bold py-3 px-4 rounded-2xl text-base opacity-50 cursor-not-allowed" disabled>
               继续 →
             </button>
+            <div class="text-center mt-2">
+              <button id="conv-skip-initial" class="text-sm text-gray-400 underline hover:text-gray-600 py-1 px-2">
+                不想跟读？跳过 →
+              </button>
+            </div>
           </div>
         `;
         const safeText = text.replace(/'/g, "\\'");
         $('conv-listen').addEventListener('click', () => speak(safeText));
         $('conv-record').addEventListener('click', () => startConvRecording(text, opt.feedback));
         $('conv-next').addEventListener('click', () => { convLineIdx++; renderConvLine(); });
+        $('conv-skip-initial').addEventListener('click', () => { convLineIdx++; renderConvLine(); });
       });
     });
   } else {
@@ -2366,8 +2383,9 @@ function startConvRecording(targetText, feedbackText) {
         let msg = '录音失败';
         if (err === 'no-speech') msg = '没听到声音';
         else if (err === 'not-allowed') msg = '请允许麦克风';
-        status.innerHTML = `<div class="bg-red-50 rounded-xl p-2 text-sm"><span class="text-red-500">⚠️ ${msg}</span> <button id="conv-retry" class="btn-primary text-white font-bold py-1 px-2 rounded text-xs">重试</button></div>`;
+        status.innerHTML = `<div class="bg-red-50 rounded-xl p-2 text-sm"><span class="text-red-500">⚠️ ${msg}</span> <button id="conv-retry" class="btn-primary text-white font-bold py-1 px-2 rounded text-xs">重试</button> <button id="conv-skip-err" class="btn-secondary font-bold py-1 px-2 rounded text-xs">跳过</button></div>`;
         $('conv-retry').addEventListener('click', () => startConvRecording(targetText, feedbackText));
+        $('conv-skip-err').addEventListener('click', () => { convLineIdx++; renderConvLine(); });
       }
     );
   }, 1500);
