@@ -10,6 +10,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <link rel="manifest" href="./manifest.json?ver=2">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%2358CC02'/%3E%3Ctext x='96' y='130' font-size='100' text-anchor='middle'%3E%F0%9F%A6%89%3C/text%3E%3C/svg%3E">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>🦉 Mini Español - 小小西语</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -633,6 +635,7 @@ function defaultState() {
     totalTime: 0, lastActiveDate: null,
     nightLearner: false, earlyLearner: false,
     dailyQuests: { date: null, list: [] },
+    earnedAchievements: [],
     // 本周 PK
     weeklyXp: 0, weeklyLessons: 0, weekStartDate: null
   };
@@ -1018,6 +1021,29 @@ function showUnitCelebration(unitTitle, accuracy, xpEarned) {
       }
     });
   }
+}
+
+// 成就解锁庆祝
+function showAchievementCelebration(achievements) {
+  showConfetti();
+  const items = achievements.map(a => `
+    <div class="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-3 flex items-center gap-3 mb-2 border-2 border-yellow-300">
+      <div class="text-4xl bounce-in">${a.emoji}</div>
+      <div class="flex-1 text-left">
+        <div class="font-bold text-gray-800">${a.name}</div>
+        <div class="text-xs text-gray-600">${a.desc}</div>
+      </div>
+    </div>
+  `).join('');
+  showModal(`
+    <div class="text-center celebration-bounce">
+      <div class="text-5xl mb-2">🎉</div>
+      <h2 class="text-2xl font-bold text-gray-800 mb-1">解锁新成就！</h2>
+      <p class="text-sm text-gray-500 mb-4">${achievements.length > 1 ? `一次拿到 ${achievements.length} 个！` : '太棒了！'}</p>
+      <div class="mb-4">${items}</div>
+      <button onclick="closeModal()" class="w-full btn-primary py-3 rounded-2xl font-bold text-white">继续 →</button>
+    </div>
+  `);
 }
 
 // 5. 提醒横幅
@@ -1428,6 +1454,8 @@ function renderStorySentence() {
   `;
   $('story-listen').addEventListener('click', () => speak(safeEs));
   $('story-record').addEventListener('click', () => startStoryRecording(s));
+  // 自动播放 1 次
+  setTimeout(() => speak(safeEs), 400);
 }
 
 function startStoryRecording(s) {
@@ -1907,6 +1935,8 @@ function renderConvLine() {
     $('conv-listen').addEventListener('click', () => speak(safeEs));
     $('conv-record').addEventListener('click', () => startConvRecording(line.es, null));
     $('conv-next').addEventListener('click', () => { convLineIdx++; renderConvLine(); });
+    // 自动播放对方的话
+    if (line.speaker !== 'user') setTimeout(() => speak(safeEs), 400);
   }
 }
 
@@ -2600,6 +2630,14 @@ function finishLesson(endedEarly = false) {
   else if (accuracy >= 80) { title = '¡Muy bien!'; subtitle = '非常好！'; emoji = '🎉'; }
   else if (accuracy >= 60) { title = 'Bien hecho'; subtitle = '做得不错'; emoji = '👏'; }
   else { title = '¡Ánimo!'; subtitle = '加油'; emoji = '💪'; }
+
+  // 检查刚解锁的成就
+  const previouslyEarned = state.earnedAchievements || [];
+  const newlyEarned = ACHIEVEMENTS.filter(a => a.check(state) && !previouslyEarned.includes(a.id));
+  if (newlyEarned.length > 0) {
+    state.earnedAchievements = [...previouslyEarned, ...newlyEarned.map(a => a.id)];
+    setTimeout(() => showAchievementCelebration(newlyEarned), 1500);
+  }
 
   $('result-title').textContent = title;
   $('result-subtitle').textContent = subtitle;
