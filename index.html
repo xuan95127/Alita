@@ -142,34 +142,34 @@
         <button id="open-pronunciation" class="bg-white text-green-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-50">开始</button>
       </div>
     </div>
-    <div class="mt-3 bg-white rounded-2xl p-4 border-2 border-gray-200">
+    <div class="mt-3 gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300">
       <div class="flex items-center gap-3">
         <div class="text-3xl">📚</div>
         <div class="flex-1">
           <h3 class="font-bold text-gray-800">复习旧词</h3>
-          <p class="text-sm text-gray-500">混合练习，巩固记忆</p>
+          <p class="text-sm text-gray-600">混合练习，巩固记忆</p>
         </div>
-        <button id="start-practice" class="btn-secondary px-4 py-2 rounded-xl font-bold text-sm">开始</button>
+        <button id="start-practice" class="bg-white text-green-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-50">开始</button>
       </div>
     </div>
-    <div class="mt-3 bg-white rounded-2xl p-4 border-2 border-gray-200">
+    <div class="mt-3 gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300">
       <div class="flex items-center gap-3">
         <div class="text-3xl">📖</div>
         <div class="flex-1">
           <h3 class="font-bold text-gray-800">西语小故事</h3>
-          <p class="text-sm text-gray-500">15 个故事 · 边读边学</p>
+          <p class="text-sm text-gray-600">15 个故事 · 边读边学</p>
         </div>
-        <button id="open-stories" class="btn-secondary px-4 py-2 rounded-xl font-bold text-sm">阅读</button>
+        <button id="open-stories" class="bg-white text-green-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-50">阅读</button>
       </div>
     </div>
-    <div class="mt-3 bg-white rounded-2xl p-4 border-2 border-gray-200">
+    <div class="mt-3 gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300">
       <div class="flex items-center gap-3">
         <div class="text-3xl">💬</div>
         <div class="flex-1">
           <h3 class="font-bold text-gray-800">情景对话</h3>
-          <p class="text-sm text-gray-500">5 个场景 · 实战练口语</p>
+          <p class="text-sm text-gray-600">5 个场景 · 实战练口语</p>
         </div>
-        <button id="open-conversations" class="btn-secondary px-4 py-2 rounded-xl font-bold text-sm">开始</button>
+        <button id="open-conversations" class="bg-white text-green-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-50">开始</button>
       </div>
     </div>
   </section>
@@ -1425,18 +1425,39 @@ function finishConversation() {
   $('back-to-convs').addEventListener('click', () => showScreen('conversations'));
 }
 
+let unitsExpanded = false;
+const UNITS_WINDOW = 5; // 默认显示单元数（当前 + 前后各 2）
+
 function renderHome() {
   const list = $('units-path');
   list.innerHTML = '';
-  UNITS.forEach((unit, idx) => {
+
+  // 找到当前应该学到的位置：最后一个已完成的下一个
+  const completedIds = UNITS.filter(u => isUnitCompleted(u.id)).map(u => u.id);
+  const lastCompleted = completedIds.length > 0 ? Math.max(...completedIds) : 0;
+  const currentIdx = Math.min(UNITS.length - 1, lastCompleted); // 0-based 索引，指向当前活跃单元
+
+  // 决定要显示的单元
+  let shownUnits;
+  if (unitsExpanded) {
+    shownUnits = UNITS;
+  } else {
+    // 显示 currentIdx 前后各 2 个
+    const start = Math.max(0, currentIdx - 2);
+    const end = Math.min(UNITS.length, currentIdx + 3); // +3 是 exclusive
+    shownUnits = UNITS.slice(start, end);
+  }
+
+  shownUnits.forEach((unit, idx) => {
+    const actualIdx = UNITS.indexOf(unit);
     const unlocked = isUnitUnlocked(unit.id);
     const completed = isUnitCompleted(unit.id);
     const crowns = state.unitCrowns[unit.id] || 0;
     const row = document.createElement('div');
-    row.className = `flex items-center gap-3 ${idx % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`;
+    row.className = `flex items-center gap-3 ${actualIdx % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`;
     row.innerHTML = `
-      <div class="flex-1 ${idx % 2 === 0 ? 'text-right pr-2' : 'text-left pl-2'}">
-        <div class="font-bold text-gray-800">第 ${idx + 1} 单元</div>
+      <div class="flex-1 ${actualIdx % 2 === 0 ? 'text-right pr-2' : 'text-left pl-2'}">
+        <div class="font-bold text-gray-800">第 ${actualIdx + 1} 单元</div>
         <div class="text-sm text-gray-500">${unit.title} · ${(unit.words || unit.items).length} 词</div>
       </div>
       <button class="unit-circle w-20 h-20 rounded-full bg-gradient-to-br ${unit.color} flex items-center justify-center text-4xl shadow-lg flex-shrink-0 ${!unlocked ? 'unit-locked' : ''}" data-unit="${unit.id}">
@@ -1449,6 +1470,22 @@ function renderHome() {
       row.querySelector('button').addEventListener('click', () => startLesson(unit));
     }
   });
+
+  // 折叠/展开按钮
+  if (UNITS.length > UNITS_WINDOW) {
+    const btn = document.createElement('button');
+    btn.id = 'units-toggle';
+    btn.className = 'w-full mt-4 py-3 rounded-2xl border-2 border-dashed border-gray-300 text-gray-600 font-bold text-sm hover:bg-gray-50 transition flex items-center justify-center gap-2';
+    const completedCount = UNITS.filter(u => isUnitCompleted(u.id)).length;
+    if (unitsExpanded) {
+      btn.innerHTML = `<span>收起</span><span class="text-base">↑</span>`;
+      btn.onclick = () => { unitsExpanded = false; renderHome(); };
+    } else {
+      btn.innerHTML = `<span>📚 查看全部 25 单元</span><span class="text-xs text-gray-400">（已完成 ${completedCount}/${UNITS.length}）</span><span class="text-base">↓</span>`;
+      btn.onclick = () => { unitsExpanded = true; renderHome(); };
+    }
+    list.appendChild(btn);
+  }
 }
 
 function renderCrowns(count) {
