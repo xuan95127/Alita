@@ -100,6 +100,64 @@
         <button id="start-practice" class="btn-secondary px-4 py-2 rounded-xl font-bold text-sm">开始</button>
       </div>
     </div>
+    <div class="mt-3 bg-white rounded-2xl p-4 border-2 border-gray-200">
+      <div class="flex items-center gap-3">
+        <div class="text-3xl">📖</div>
+        <div class="flex-1">
+          <h3 class="font-bold text-gray-800">西语小故事</h3>
+          <p class="text-sm text-gray-500">15 个故事 · 边读边学</p>
+        </div>
+        <button id="open-stories" class="btn-secondary px-4 py-2 rounded-xl font-bold text-sm">阅读</button>
+      </div>
+    </div>
+    <div class="mt-3 bg-white rounded-2xl p-4 border-2 border-gray-200">
+      <div class="flex items-center gap-3">
+        <div class="text-3xl">💬</div>
+        <div class="flex-1">
+          <h3 class="font-bold text-gray-800">情景对话</h3>
+          <p class="text-sm text-gray-500">5 个场景 · 实战练口语</p>
+        </div>
+        <button id="open-conversations" class="btn-secondary px-4 py-2 rounded-xl font-bold text-sm">开始</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-stories" class="hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button id="back-from-stories" class="text-2xl">←</button>
+      <h2 class="text-2xl font-bold text-gray-800">📖 西语小故事</h2>
+    </div>
+    <div id="stories-list" class="space-y-3"></div>
+  </section>
+
+  <section id="screen-story" class="hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button id="back-from-story" class="text-2xl">←</button>
+      <div class="flex-1">
+        <h2 class="text-xl font-bold text-gray-800" id="story-title">故事</h2>
+        <div class="text-xs text-gray-500" id="story-progress">1/5</div>
+      </div>
+    </div>
+    <div id="story-content" class="bg-white rounded-2xl p-6 shadow-lg min-h-[400px]"></div>
+  </section>
+
+  <section id="screen-conversations" class="hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button id="back-from-conversations" class="text-2xl">←</button>
+      <h2 class="text-2xl font-bold text-gray-800">💬 情景对话</h2>
+    </div>
+    <div id="conversations-list" class="space-y-3"></div>
+  </section>
+
+  <section id="screen-conversation" class="hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button id="back-from-conversation" class="text-2xl">←</button>
+      <div class="flex-1">
+        <h2 class="text-xl font-bold text-gray-800" id="conv-title">对话</h2>
+        <div class="text-xs text-gray-500" id="conv-progress">1/5</div>
+      </div>
+    </div>
+    <div id="conv-content" class="bg-white rounded-2xl p-6 shadow-lg min-h-[400px]"></div>
   </section>
 
   <section id="screen-lesson" class="hidden">
@@ -225,6 +283,7 @@
 </div>
 
 <script src="./content.js"></script>
+<script src="./stories.js"></script>
 <script>
 // ==================== 成就定义 ====================
 const ACHIEVEMENTS = [
@@ -396,7 +455,7 @@ function updateDaily() {
 }
 
 function showScreen(name) {
-  ['learn', 'lesson', 'result', 'quests', 'shop', 'profile'].forEach(s => $(`screen-${s}`).classList.add('hidden'));
+  ['learn', 'lesson', 'result', 'quests', 'shop', 'profile', 'stories', 'story', 'conversations', 'conversation'].forEach(s => $(`screen-${s}`).classList.add('hidden'));
   $(`screen-${name}`).classList.remove('hidden');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (['learn', 'quests', 'shop', 'profile'].includes(name)) {
@@ -411,6 +470,245 @@ function showScreen(name) {
 function getUnitWords(unit) {
   if (unit.type === 'pronunciation') return unit.items;
   return unit.words;
+}
+
+function renderStories() {
+  const list = $('stories-list');
+  list.innerHTML = '';
+  STORIES.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'bg-white rounded-2xl p-4 shadow cursor-pointer hover:shadow-lg transition-shadow';
+    div.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="text-3xl">${s.icon}</div>
+        <div class="flex-1">
+          <h3 class="font-bold text-gray-800">${s.title}</h3>
+          <p class="text-sm text-gray-500">${s.description} · ${s.level} · ${s.questions.length} 题</p>
+        </div>
+        <div class="text-2xl">▶️</div>
+      </div>
+    `;
+    div.addEventListener('click', () => openStory(s));
+    list.appendChild(div);
+  });
+}
+
+let currentStory = null;
+let storySentenceIdx = 0;
+let storyQuestionIdx = 0;
+let storyScore = 0;
+
+function openStory(s) {
+  currentStory = s;
+  storySentenceIdx = 0;
+  storyQuestionIdx = 0;
+  storyScore = 0;
+  $('story-title').textContent = s.title;
+  $('story-progress').textContent = `${s.sentences.length} 句 · ${s.questions.length} 题`;
+  showScreen('story');
+  renderStorySentence();
+}
+
+function renderStorySentence() {
+  if (storySentenceIdx >= currentStory.sentences.length) {
+    renderStoryQuestion();
+    return;
+  }
+  const s = currentStory.sentences[storySentenceIdx];
+  $('story-content').innerHTML = `
+    <div class="text-center">
+      <div class="text-xs text-gray-400 mb-1">第 ${storySentenceIdx + 1}/${currentStory.sentences.length} 句</div>
+      <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 mb-6">
+        <div class="flex items-center justify-center gap-3 mb-3">
+          <button onclick="speak('${s.es.replace(/'/g, "\\'")}')" class="text-3xl hover:scale-110 transition-transform">🔊</button>
+        </div>
+        <div class="text-2xl font-bold text-gray-800 mb-3">${s.es}</div>
+        <div class="text-base text-gray-600">${s.zh}</div>
+      </div>
+      <button id="next-sentence" class="btn-primary px-8 py-3 rounded-2xl font-bold">
+        ${storySentenceIdx === currentStory.sentences.length - 1 ? '开始答题 →' : '下一句 →'}
+      </button>
+    </div>
+  `;
+  $('next-sentence').addEventListener('click', () => {
+    storySentenceIdx++;
+    renderStorySentence();
+  });
+}
+
+function renderStoryQuestion() {
+  if (storyQuestionIdx >= currentStory.questions.length) {
+    finishStory();
+    return;
+  }
+  const q = currentStory.questions[storyQuestionIdx];
+  $('story-content').innerHTML = `
+    <div class="text-center">
+      <div class="text-xs text-gray-400 mb-1">理解题 ${storyQuestionIdx + 1}/${currentStory.questions.length}</div>
+      <div class="text-lg font-bold text-gray-800 mb-6">${q.q}</div>
+      <div class="grid grid-cols-1 gap-3">
+        ${q.options.map((opt, i) => `
+          <button class="option-btn story-option relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-base" data-idx="${i}">
+            ${opt}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  document.querySelectorAll('.story-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.story-option').forEach(b => b.disabled = true);
+      const idx = parseInt(btn.dataset.idx);
+      if (idx === q.answer) {
+        btn.classList.add('option-correct');
+        playSound('correct');
+        storyScore++;
+        updateXp(5);
+        setTimeout(() => { storyQuestionIdx++; renderStoryQuestion(); }, 1000);
+      } else {
+        btn.classList.add('option-wrong');
+        playSound('wrong');
+        document.querySelectorAll('.story-option').forEach(b => {
+          if (parseInt(b.dataset.idx) === q.answer) b.classList.add('option-correct');
+        });
+        setTimeout(() => { storyQuestionIdx++; renderStoryQuestion(); }, 1500);
+      }
+    });
+  });
+}
+
+function finishStory() {
+  const total = currentStory.questions.length;
+  const acc = Math.round((storyScore / total) * 100);
+  $('story-content').innerHTML = `
+    <div class="text-center bounce-in">
+      <div class="text-6xl mb-3">🎉</div>
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">${acc >= 80 ? '¡Muy bien!' : '¡Ánimo!'}</h2>
+      <p class="text-gray-600 mb-4">答对 ${storyScore}/${total} 题 (${acc}%)</p>
+      <div class="bg-yellow-50 rounded-2xl p-4 mb-4">
+        <div class="text-3xl font-bold text-yellow-600">+${storyScore * 5 + 10} XP</div>
+      </div>
+      <button id="back-to-stories" class="btn-primary px-6 py-3 rounded-2xl font-bold">返回故事列表</button>
+    </div>
+  `;
+  state.totalXp += storyScore * 5 + 10;
+  state.todayXp += storyScore * 5 + 10;
+  state.totalLessons++;
+  saveState(); updateTopBar(); updateDaily();
+  if (acc >= 80) { showConfetti(); playSound('complete'); }
+  $('back-to-stories').addEventListener('click', () => showScreen('stories'));
+}
+
+function renderConversations() {
+  const list = $('conversations-list');
+  list.innerHTML = '';
+  CONVERSATIONS.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'bg-white rounded-2xl p-4 shadow cursor-pointer hover:shadow-lg transition-shadow';
+    div.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="text-3xl">${c.icon}</div>
+        <div class="flex-1">
+          <h3 class="font-bold text-gray-800">${c.title}</h3>
+          <p class="text-sm text-gray-500">${c.description} · ${c.level}</p>
+        </div>
+        <div class="text-2xl">▶️</div>
+      </div>
+    `;
+    div.addEventListener('click', () => openConversation(c));
+    list.appendChild(div);
+  });
+}
+
+let currentConv = null;
+let convLineIdx = 0;
+let convScore = 0;
+
+function openConversation(c) {
+  currentConv = c;
+  convLineIdx = 0;
+  convScore = 0;
+  $('conv-title').textContent = c.title;
+  $('conv-progress').textContent = `${c.lines.filter(l => l.prompt).length} 轮对话`;
+  showScreen('conversation');
+  renderConvLine();
+}
+
+function renderConvLine() {
+  if (convLineIdx >= currentConv.lines.length) {
+    finishConversation();
+    return;
+  }
+  const line = currentConv.lines[convLineIdx];
+  if (line.prompt) {
+    $('conv-content').innerHTML = `
+      <div class="text-center">
+        <div class="text-xs text-gray-400 mb-1">你说</div>
+        <div class="text-sm text-gray-500 mb-4">请选择一个回复：</div>
+        <div class="grid grid-cols-1 gap-3">
+          ${line.options.map((opt, i) => `
+            <button class="conv-option relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-base" data-idx="${i}">
+              ${opt.text}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    document.querySelectorAll('.conv-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.conv-option').forEach(b => b.disabled = true);
+        const idx = parseInt(btn.dataset.idx);
+        const opt = line.options[idx];
+        btn.classList.add('option-correct');
+        showConvFeedback(opt.feedback, () => { convLineIdx++; renderConvLine(); });
+      });
+    });
+  } else {
+    const speakerLabel = line.speaker === 'waiter' || line.speaker === 'local' || line.speaker === 'other' || line.speaker === 'seller' ? '👤 ' : (line.speaker === 'user' ? '🗣️ ' : '');
+    $('conv-content').innerHTML = `
+      <div class="text-center">
+        <div class="text-xs text-gray-400 mb-1">${speakerLabel}</div>
+        <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 mb-6">
+          <button onclick="speak('${line.es.replace(/'/g, "\\'")}')" class="text-3xl hover:scale-110 transition-transform mb-3">🔊</button>
+          <div class="text-2xl font-bold text-gray-800 mb-3">${line.es}</div>
+          <div class="text-base text-gray-600">${line.zh}</div>
+        </div>
+        <button id="next-conv-line" class="btn-primary px-8 py-3 rounded-2xl font-bold">继续 →</button>
+      </div>
+    `;
+    $('next-conv-line').addEventListener('click', () => { convLineIdx++; renderConvLine(); });
+  }
+}
+
+function showConvFeedback(text, cb) {
+  $('conv-content').innerHTML = `
+    <div class="text-center bounce-in">
+      <div class="text-5xl mb-3">💬</div>
+      <div class="text-xl font-bold text-gray-800 mb-4">${text}</div>
+      <button id="feedback-continue" class="btn-primary px-6 py-3 rounded-2xl font-bold">继续</button>
+    </div>
+  `;
+  $('feedback-continue').addEventListener('click', cb);
+}
+
+function finishConversation() {
+  $('conv-content').innerHTML = `
+    <div class="text-center bounce-in">
+      <div class="text-6xl mb-3">🎉</div>
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">¡Conversación completa!</h2>
+      <p class="text-gray-600 mb-4">对话完成！</p>
+      <div class="bg-yellow-50 rounded-2xl p-4 mb-4">
+        <div class="text-3xl font-bold text-yellow-600">+20 XP</div>
+      </div>
+      <button id="back-to-convs" class="btn-primary px-6 py-3 rounded-2xl font-bold">返回对话列表</button>
+    </div>
+  `;
+  state.totalXp += 20;
+  state.todayXp += 20;
+  state.totalLessons++;
+  saveState(); updateTopBar(); updateDaily();
+  showConfetti(); playSound('complete');
+  $('back-to-convs').addEventListener('click', () => showScreen('conversations'));
 }
 
 function renderHome() {
@@ -953,6 +1251,12 @@ $('start-practice').addEventListener('click', () => {
   learned.forEach(u => getUnitWords(u).forEach(w => allWords.push(w)));
   startLesson({ id: 0, title: '综合复习', words: allWords, emoji: '📚' }, true);
 });
+$('open-stories').addEventListener('click', () => { renderStories(); showScreen('stories'); });
+$('open-conversations').addEventListener('click', () => { renderConversations(); showScreen('conversations'); });
+$('back-from-stories').addEventListener('click', () => showScreen('learn'));
+$('back-from-conversations').addEventListener('click', () => showScreen('learn'));
+$('back-from-story').addEventListener('click', () => showScreen('stories'));
+$('back-from-conversation').addEventListener('click', () => showScreen('conversations'));
 document.querySelectorAll('.nav-btn').forEach(b => {
   b.addEventListener('click', () => showScreen(b.dataset.screen));
 });
