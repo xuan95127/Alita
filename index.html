@@ -2035,7 +2035,7 @@ function startRecording(targetText, onResult) {
     if (isRecording && recognition) {
       try { recognition.stop(); } catch (e) {}
     }
-  }, 6000);
+  }, 8000);
   recognition.onresult = (event) => {
     resultReceived = true;
     clearTimeout(timeoutId);
