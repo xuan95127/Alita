@@ -1,0 +1,7 @@
+# Build outputs
+.DS_Store
+node_modules/
+*.log
+.vercel
+.idea
+.vscode

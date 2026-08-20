@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mini Español">
+<link rel="manifest" href="./manifest.json">
+<title>🦉 Mini Español - 小小西语</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --duo-green: #58CC02;
+    --duo-green-dark: #58A700;
+    --duo-blue: #1CB0F6;
+    --duo-purple: #CE82FF;
+    --duo-red: #FF4B4B;
+    --duo-yellow: #FFC800;
+    --duo-orange: #FF9600;
+  }
+  * { -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; user-select: none; -webkit-user-select: none; overscroll-behavior: none; }
+  .btn-primary { background: var(--duo-green); box-shadow: 0 4px 0 var(--duo-green-dark); transition: all 0.1s; color: white; }
+  .btn-primary:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 var(--duo-green-dark); }
+  .btn-primary:disabled { opacity: 0.5; }
+  .btn-danger { background: var(--duo-red); box-shadow: 0 4px 0 #d32f2f; transition: all 0.1s; color: white; }
+  .btn-secondary { background: white; color: #afafaf; box-shadow: 0 2px 0 #e5e5e5; border: 2px solid #e5e5e5; transition: all 0.1s; }
+  .btn-secondary:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 #e5e5e5; }
+  .progress-bar { transition: width 0.4s ease; }
+  .shake { animation: shake 0.4s; }
+  .bounce-in { animation: bounceIn 0.5s; }
+  .slide-up { animation: slideUp 0.4s ease; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+  @keyframes bounceIn { 0%{transform:scale(0.5);opacity:0} 60%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+  @keyframes slideUp { 0%{transform:translateY(20px);opacity:0} 100%{transform:translateY(0);opacity:1} }
+  @keyframes confetti-fall { 0%{transform:translateY(0) rotate(0);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  .option-btn { transition: all 0.15s; }
+  .option-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .option-correct { background: #d7ffb8 !important; border-color: var(--duo-green) !important; color: var(--duo-green-dark) !important; }
+  .option-wrong { background: #ffdfe0 !important; border-color: var(--duo-red) !important; color: var(--duo-red) !important; }
+  .option-correct::after { content: '✓'; position: absolute; right: 16px; font-weight: bold; }
+  .option-wrong::after { content: '✗'; position: absolute; right: 16px; font-weight: bold; }
+  .unit-circle { transition: all 0.2s; }
+  .unit-circle:hover { transform: scale(1.05); }
+  .unit-locked { filter: grayscale(0.8); opacity: 0.6; }
+  .owl-bounce { animation: float 2s ease-in-out infinite; }
+  .confetti-piece { position: fixed; width: 8px; height: 14px; top: -20px; pointer-events: none; z-index: 100; animation: confetti-fall 3s linear forwards; }
+  .nav-btn.active { color: var(--duo-green); }
+  .nav-btn.active svg { stroke: var(--duo-green); }
+  input, textarea { user-select: text; -webkit-user-select: text; }
+  .streak-fire { animation: flicker 1.2s infinite; display: inline-block; }
+  @keyframes flicker { 0%,100%{transform:scale(1) rotate(-3deg)} 50%{transform:scale(1.15) rotate(3deg)} }
+  .gradient-card { background: linear-gradient(135deg, #58CC02 0%, #37b300 100%); }
+  .word-tile { transition: all 0.2s; }
+  .word-tile:active { transform: scale(0.95); }
+</style>
+</head>
+<body class="bg-gray-100 min-h-screen pb-20">
+
+<header class="bg-white border-b-2 border-gray-200 sticky top-0 z-40">
+  <div class="max-w-2xl mx-auto px-4 py-2 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl owl-bounce">🦉</span>
+    </div>
+    <div class="flex items-center gap-3 text-sm font-bold">
+      <div class="flex items-center gap-1 text-orange-500" title="连胜"><span class="streak-fire">🔥</span><span id="streak">0</span></div>
+      <div class="flex items-center gap-1 text-blue-500" title="宝石"><span>💎</span><span id="gems">0</span></div>
+      <div class="flex items-center gap-1 text-yellow-600" title="经验"><span>⭐</span><span id="xp">0</span></div>
+      <div class="flex items-center gap-1 text-red-500" title="红心"><span>❤️</span><span id="hearts">5</span></div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-2xl mx-auto px-4 py-4">
+  <section id="screen-learn">
+    <div class="gradient-card rounded-2xl p-4 text-white mb-4 shadow-lg">
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <div class="text-sm opacity-90">每日目标</div>
+          <div class="text-lg font-bold"><span id="daily-current">0</span> / <span id="daily-goal">30</span> XP</div>
+        </div>
+        <div class="text-4xl">🎯</div>
+      </div>
+      <div class="h-3 bg-white/20 rounded-full overflow-hidden">
+        <div id="daily-progress" class="progress-bar h-full bg-white" style="width: 0%"></div>
+      </div>
+    </div>
+    <div class="relative">
+      <div id="units-path" class="space-y-3"></div>
+    </div>
+    <div class="mt-6 bg-white rounded-2xl p-4 border-2 border-gray-200">
+      <div class="flex items-center gap-3">
+        <div class="text-3xl">📚</div>
+        <div class="flex-1">
+          <h3 class="font-bold text-gray-800">复习旧词</h3>
+          <p class="text-sm text-gray-500">混合练习，巩固记忆</p>
+        </div>
+        <button id="start-practice" class="btn-secondary px-4 py-2 rounded-xl font-bold text-sm">开始</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-lesson" class="hidden">
+    <div class="mb-4">
+      <div class="flex items-center justify-between mb-2">
+        <button id="exit-lesson" class="text-gray-500 text-xl">✕</button>
+        <div class="flex items-center gap-2"><span class="text-xl">❤️</span><span id="lesson-hearts" class="font-bold text-red-500">5</span></div>
+      </div>
+      <div class="h-4 bg-gray-200 rounded-full overflow-hidden">
+        <div id="lesson-progress" class="progress-bar h-full gradient-card" style="width: 0%"></div>
+      </div>
+    </div>
+    <div id="question-area" class="bg-white rounded-2xl p-6 shadow-lg min-h-[450px]"></div>
+  </section>
+
+  <section id="screen-result" class="hidden">
+    <div class="slide-up text-center py-6">
+      <div class="text-7xl mb-3 bounce-in" id="result-emoji">🎉</div>
+      <h2 class="text-3xl font-bold text-gray-800 mb-1" id="result-title">¡Muy bien!</h2>
+      <p class="text-gray-600 mb-6" id="result-subtitle">太棒了！</p>
+      <div class="bg-white rounded-2xl p-6 shadow-lg mb-6 max-w-sm mx-auto">
+        <div class="grid grid-cols-3 gap-4 text-center mb-4">
+          <div><div class="text-2xl font-bold text-yellow-500" id="result-xp">+0</div><div class="text-xs text-gray-500 mt-1">总 XP</div></div>
+          <div><div class="text-2xl font-bold text-red-500" id="result-hearts">5</div><div class="text-xs text-gray-500 mt-1">剩余红心</div></div>
+          <div><div class="text-2xl font-bold text-blue-500" id="result-time">0:00</div><div class="text-xs text-gray-500 mt-1">用时</div></div>
+        </div>
+        <div class="border-t-2 border-gray-100 pt-4">
+          <div class="text-sm text-gray-600 mb-2">本课准确率</div>
+          <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+            <div id="result-accuracy-bar" class="h-full gradient-card" style="width: 0%"></div>
+          </div>
+          <div class="text-sm font-bold mt-1" id="result-accuracy">0%</div>
+        </div>
+      </div>
+      <div class="flex gap-3 justify-center">
+        <button id="back-home" class="btn-secondary px-6 py-3 rounded-2xl font-bold">返回首页</button>
+        <button id="next-lesson" class="btn-primary px-6 py-3 rounded-2xl font-bold">继续 →</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-quests" class="hidden">
+    <h2 class="text-2xl font-bold text-gray-800 mb-1">每日任务</h2>
+    <p class="text-sm text-gray-500 mb-4">完成任务赢取宝石 💎</p>
+    <div id="quest-list" class="space-y-3"></div>
+  </section>
+
+  <section id="screen-shop" class="hidden">
+    <h2 class="text-2xl font-bold text-gray-800 mb-1">商店</h2>
+    <p class="text-sm text-gray-500 mb-4">用宝石兑换道具</p>
+    <div class="space-y-3">
+      <div class="bg-white rounded-2xl p-4 shadow flex items-center gap-3">
+        <div class="text-4xl">❤️</div>
+        <div class="flex-1"><h3 class="font-bold text-gray-800">红心补给</h3><p class="text-xs text-gray-500">立即补满 5 颗红心</p></div>
+        <button class="buy-btn btn-secondary px-3 py-2 rounded-xl font-bold text-sm" data-item="hearts" data-cost="50">💎 50</button>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow flex items-center gap-3">
+        <div class="text-4xl">❄️</div>
+        <div class="flex-1"><h3 class="font-bold text-gray-800">连胜冰冻</h3><p class="text-xs text-gray-500">断签 1 天也不清零</p></div>
+        <button class="buy-btn btn-secondary px-3 py-2 rounded-xl font-bold text-sm" data-item="streak_freeze" data-cost="100">💎 100</button>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow flex items-center gap-3">
+        <div class="text-4xl">🎁</div>
+        <div class="flex-1"><h3 class="font-bold text-gray-800">神秘宝箱</h3><p class="text-xs text-gray-500">随机获得 20-50 XP</p></div>
+        <button class="buy-btn btn-secondary px-3 py-2 rounded-xl font-bold text-sm" data-item="mystery" data-cost="30">💎 30</button>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow flex items-center gap-3">
+        <div class="text-4xl">⚡</div>
+        <div class="flex-1"><h3 class="font-bold text-gray-800">双倍 XP</h3><p class="text-xs text-gray-500">下一节课 XP 翻倍（2 节）</p></div>
+        <button class="buy-btn btn-secondary px-3 py-2 rounded-xl font-bold text-sm" data-item="double_xp" data-cost="80">💎 80</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-profile" class="hidden">
+    <h2 class="text-2xl font-bold text-gray-800 mb-1">我的档案</h2>
+    <p class="text-sm text-gray-500 mb-4">查看你的学习成就</p>
+    <div class="bg-white rounded-2xl p-5 shadow mb-4">
+      <div class="flex items-center gap-4">
+        <div class="w-16 h-16 rounded-full gradient-card flex items-center justify-center text-3xl">🦉</div>
+        <div class="flex-1">
+          <div class="font-bold text-gray-800 text-lg">小西语学者</div>
+          <div class="text-sm text-gray-500">等级 <span id="profile-level">1</span> · <span id="profile-xp">0</span> XP</div>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="bg-white rounded-2xl p-4 shadow text-center"><div class="text-3xl mb-1">🔥</div><div class="text-2xl font-bold text-orange-500" id="profile-streak">0</div><div class="text-xs text-gray-500">连胜天数</div></div>
+      <div class="bg-white rounded-2xl p-4 shadow text-center"><div class="text-3xl mb-1">⭐</div><div class="text-2xl font-bold text-yellow-500" id="profile-total-xp">0</div><div class="text-xs text-gray-500">总 XP</div></div>
+      <div class="bg-white rounded-2xl p-4 shadow text-center"><div class="text-3xl mb-1">📖</div><div class="text-2xl font-bold text-blue-500" id="profile-words">0</div><div class="text-xs text-gray-500">学过单词</div></div>
+      <div class="bg-white rounded-2xl p-4 shadow text-center"><div class="text-3xl mb-1">✅</div><div class="text-2xl font-bold text-green-500" id="profile-lessons">0</div><div class="text-xs text-gray-500">完成关卡</div></div>
+    </div>
+    <h3 class="font-bold text-gray-800 mb-2">🏆 成就</h3>
+    <div id="achievements-list" class="grid grid-cols-3 gap-3"></div>
+  </section>
+</main>
+
+<nav class="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 z-40">
+  <div class="max-w-2xl mx-auto grid grid-cols-4">
+    <button class="nav-btn active py-2 flex flex-col items-center gap-1" data-screen="learn">
+      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      <span class="text-xs font-bold">学习</span>
+    </button>
+    <button class="nav-btn py-2 flex flex-col items-center gap-1 text-gray-400" data-screen="quests">
+      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="text-xs font-bold">任务</span>
+    </button>
+    <button class="nav-btn py-2 flex flex-col items-center gap-1 text-gray-400" data-screen="shop">
+      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+      <span class="text-xs font-bold">商店</span>
+    </button>
+    <button class="nav-btn py-2 flex flex-col items-center gap-1 text-gray-400" data-screen="profile">
+      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      <span class="text-xs font-bold">档案</span>
+    </button>
+  </div>
+</nav>
+
+<div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl p-6 max-w-sm w-full bounce-in">
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script src="./content.js"></script>
+<script>
+// ==================== 成就定义 ====================
+const ACHIEVEMENTS = [
+  { id: 'first_lesson', emoji: '🌱', name: '初学者', desc: '完成第一节课', check: s => s.completedUnits.length >= 1 },
+  { id: 'streak_3', emoji: '🔥', name: '三天连击', desc: '连胜 3 天', check: s => s.streak >= 3 },
+  { id: 'streak_7', emoji: '🌟', name: '一周坚持', desc: '连胜 7 天', check: s => s.streak >= 7 },
+  { id: 'streak_30', emoji: '💎', name: '月度冠军', desc: '连胜 30 天', check: s => s.streak >= 30 },
+  { id: 'xp_100', emoji: '⭐', name: '百分达人', desc: '获得 100 XP', check: s => s.totalXp >= 100 },
+  { id: 'xp_500', emoji: '🌠', name: '五百精英', desc: '获得 500 XP', check: s => s.totalXp >= 500 },
+  { id: 'xp_1000', emoji: '🚀', name: '千分王者', desc: '获得 1000 XP', check: s => s.totalXp >= 1000 },
+  { id: 'words_20', emoji: '📚', name: '词汇入门', desc: '学过 20 个单词', check: s => s.wordsLearned >= 20 },
+  { id: 'words_50', emoji: '📖', name: '词汇丰富', desc: '学过 50 个单词', check: s => s.wordsLearned >= 50 },
+  { id: 'all_units', emoji: '🏆', name: '完整通关', desc: '完成所有单元', check: s => s.completedUnits.length >= UNITS.length },
+  { id: 'perfect', emoji: '💯', name: '完美一课', desc: '一节课 100% 正确', check: s => s.perfectLessons >= 1 },
+  { id: 'night_owl', emoji: '🦉', name: '夜猫子', desc: '晚上 10 点后学习', check: s => s.nightLearner },
+  { id: 'early_bird', emoji: '🐦', name: '早起鸟', desc: '早上 7 点前学习', check: s => s.earlyLearner }
+];
+
+// ==================== 状态 ====================
+const STORAGE_KEY = 'mini-espanol-v2';
+
+let state = {
+  totalXp: 0, todayXp: 0, lastDailyDate: null,
+  streak: 0, lastStreakDate: null,
+  hearts: 5, gems: 50, streakFreezes: 0, doubleXp: 0,
+  completedUnits: [], unitCrowns: {},
+  wordsLearned: 0, perfectLessons: 0, totalLessons: 0,
+  totalTime: 0, lastActiveDate: null,
+  nightLearner: false, earlyLearner: false,
+  dailyQuests: { date: null, list: [] }
+};
+
+let currentLesson = null, lessonQuestions = [], currentQuestionIdx = 0;
+let correctCount = 0, lessonStartTime = 0, currentUnitWords = [];
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) state = { ...state, ...JSON.parse(saved) };
+  } catch (e) {}
+  checkDaily(); checkStreak();
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function checkDaily() {
+  const today = new Date().toDateString();
+  if (state.lastDailyDate !== today) {
+    state.todayXp = 0; state.hearts = 5; state.lastDailyDate = today;
+    state.dailyQuests = { date: today, list: generateQuests() };
+    saveState();
+  }
+}
+
+function checkStreak() {
+  const today = new Date().toDateString();
+  if (state.lastStreakDate && state.lastStreakDate !== today) {
+    const last = new Date(state.lastStreakDate);
+    const diff = (new Date(today) - last) / (1000 * 60 * 60 * 24);
+    if (diff > 1) {
+      if (state.streakFreezes > 0) {
+        state.streakFreezes--;
+      } else state.streak = 0;
+    }
+  }
+}
+
+function generateQuests() {
+  return [
+    { id: 'q1', text: '获得 10 XP', target: 10, progress: 0, reward: 5, icon: '⭐' },
+    { id: 'q2', text: '获得 30 XP', target: 30, progress: 0, reward: 10, icon: '⭐' },
+    { id: 'q3', text: '完成 1 节课程', target: 1, progress: 0, reward: 15, icon: '📚', type: 'lessons' }
+  ];
+}
+
+function $(id) { return document.getElementById(id); }
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'es-ES';
+  u.rate = 0.85;
+  u.pitch = 1.1;
+  const voices = window.speechSynthesis.getVoices();
+  const esVoice = voices.find(v => v.lang.startsWith('es')) || voices.find(v => v.lang.includes('ES'));
+  if (esVoice) u.voice = esVoice;
+  window.speechSynthesis.speak(u);
+}
+
+if ('speechSynthesis' in window) {
+  speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+}
+
+function playSound(type) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (type === 'correct') {
+      [523, 659, 784].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.08);
+        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.08 + 0.15);
+        o.start(ctx.currentTime + i * 0.08);
+        o.stop(ctx.currentTime + i * 0.08 + 0.15);
+      });
+    } else if (type === 'wrong') {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.setValueAtTime(200, ctx.currentTime);
+      o.frequency.linearRampToValueAtTime(120, ctx.currentTime + 0.3);
+      g.gain.setValueAtTime(0.2, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      o.start(); o.stop(ctx.currentTime + 0.3);
+    } else if (type === 'complete') {
+      [523, 659, 784, 1047].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.1);
+        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.1 + 0.3);
+        o.start(ctx.currentTime + i * 0.1);
+        o.stop(ctx.currentTime + i * 0.1 + 0.3);
+      });
+    }
+  } catch (e) {}
+}
+
+function showConfetti() {
+  const colors = ['#58CC02', '#1CB0F6', '#CE82FF', '#FFC800', '#FF4B4B', '#FF9600'];
+  for (let i = 0; i < 50; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + 'vw';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDelay = Math.random() * 0.5 + 's';
+    piece.style.animationDuration = (2 + Math.random() * 2) + 's';
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), 4000);
+  }
+}
+
+function showModal(html) { $('modal-content').innerHTML = html; $('modal').classList.remove('hidden'); }
+function closeModal() { $('modal').classList.add('hidden'); }
+$('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+
+function updateTopBar() {
+  $('streak').textContent = state.streak;
+  $('gems').textContent = state.gems;
+  $('xp').textContent = state.totalXp;
+  $('hearts').textContent = state.hearts;
+}
+
+function updateDaily() {
+  const goal = 30;
+  $('daily-current').textContent = state.todayXp;
+  $('daily-goal').textContent = goal;
+  $('daily-progress').style.width = Math.min(100, (state.todayXp / goal) * 100) + '%';
+}
+
+function showScreen(name) {
+  ['learn', 'lesson', 'result', 'quests', 'shop', 'profile'].forEach(s => $(`screen-${s}`).classList.add('hidden'));
+  $(`screen-${name}`).classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (['learn', 'quests', 'shop', 'profile'].includes(name)) {
+    document.querySelector(`.nav-btn[data-screen="${name}"]`)?.classList.add('active');
+  }
+  if (name === 'learn') renderHome();
+  if (name === 'quests') renderQuests();
+  if (name === 'profile') renderProfile();
+  updateTopBar(); updateDaily();
+}
+
+function getUnitWords(unit) {
+  if (unit.type === 'pronunciation') return unit.items;
+  return unit.words;
+}
+
+function renderHome() {
+  const list = $('units-path');
+  list.innerHTML = '';
+  UNITS.forEach((unit, idx) => {
+    const unlocked = isUnitUnlocked(unit.id);
+    const completed = isUnitCompleted(unit.id);
+    const crowns = state.unitCrowns[unit.id] || 0;
+    const row = document.createElement('div');
+    row.className = `flex items-center gap-3 ${idx % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`;
+    row.innerHTML = `
+      <div class="flex-1 ${idx % 2 === 0 ? 'text-right pr-2' : 'text-left pl-2'}">
+        <div class="font-bold text-gray-800">第 ${idx + 1} 单元</div>
+        <div class="text-sm text-gray-500">${unit.title} · ${(unit.words || unit.items).length} 词</div>
+      </div>
+      <button class="unit-circle w-20 h-20 rounded-full bg-gradient-to-br ${unit.color} flex items-center justify-center text-4xl shadow-lg flex-shrink-0 ${!unlocked ? 'unit-locked' : ''}" data-unit="${unit.id}">
+        ${!unlocked ? '🔒' : completed ? '⭐' : unit.emoji}
+      </button>
+      <div class="flex-1 flex justify-center">${unlocked ? renderCrowns(crowns) : ''}</div>
+    `;
+    list.appendChild(row);
+    if (unlocked) {
+      row.querySelector('button').addEventListener('click', () => startLesson(unit));
+    }
+  });
+}
+
+function renderCrowns(count) {
+  let html = '<div class="flex gap-1">';
+  for (let i = 0; i < 5; i++) html += `<span class="${i < count ? '' : 'opacity-20'}">👑</span>`;
+  return html + '</div>';
+}
+
+function isUnitUnlocked(unitId) {
+  if (unitId === 1) return true;
+  return (state.unitCrowns[unitId - 1] || 0) >= 1;
+}
+
+function isUnitCompleted(unitId) { return (state.unitCrowns[unitId] || 0) >= 1; }
+
+function renderQuests() {
+  const list = $('quest-list');
+  list.innerHTML = '';
+  state.dailyQuests.list.forEach(q => {
+    let progress = q.type === 'lessons' ? state.totalLessons : state.todayXp;
+    const done = progress >= q.target;
+    const div = document.createElement('div');
+    div.className = `bg-white rounded-2xl p-4 shadow ${done ? 'opacity-60' : ''}`;
+    div.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="text-3xl">${q.icon}</div>
+        <div class="flex-1">
+          <h3 class="font-bold text-gray-800 ${done ? 'line-through' : ''}">${q.text}</h3>
+          <div class="text-xs text-gray-500">${done ? '已完成' : `进度: ${Math.min(progress, q.target)}/${q.target}`}</div>
+          <div class="h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
+            <div class="progress-bar h-full gradient-card" style="width: ${Math.min(100, (progress / q.target) * 100)}%"></div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm font-bold text-blue-500">💎 ${q.reward}</div>
+          ${done ? '<div class="text-xs text-green-500">✓ 已领</div>' : `<button class="claim-btn text-xs btn-primary px-2 py-1 rounded-lg font-bold" data-qid="${q.id}" data-reward="${q.reward}">领取</button>`}
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+  document.querySelectorAll('.claim-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const qid = btn.dataset.qid;
+      const reward = parseInt(btn.dataset.reward);
+      const quest = state.dailyQuests.list.find(q => q.id === qid);
+      let prog = quest.type === 'lessons' ? state.totalLessons : state.todayXp;
+      if (prog >= quest.target) {
+        state.gems += reward; saveState(); updateTopBar(); renderQuests();
+        playSound('complete'); showConfetti();
+      } else {
+        showModal(`<h3 class="text-xl font-bold mb-2">还没完成</h3><p class="text-gray-600">先去做任务吧～</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">好的</button>`);
+      }
+    });
+  });
+}
+
+function renderProfile() {
+  $('profile-level').textContent = Math.floor(state.totalXp / 100) + 1;
+  $('profile-xp').textContent = state.totalXp % 100;
+  $('profile-streak').textContent = state.streak;
+  $('profile-total-xp').textContent = state.totalXp;
+  $('profile-words').textContent = state.wordsLearned;
+  $('profile-lessons').textContent = state.totalLessons;
+  const list = $('achievements-list');
+  list.innerHTML = '';
+  ACHIEVEMENTS.forEach(a => {
+    const unlocked = a.check(state);
+    const div = document.createElement('div');
+    div.className = `rounded-2xl p-3 text-center ${unlocked ? 'bg-gradient-to-br from-yellow-50 to-yellow-100 shadow' : 'bg-gray-100 opacity-50'}`;
+    div.innerHTML = `
+      <div class="text-4xl ${unlocked ? '' : 'grayscale'}">${a.emoji}</div>
+      <div class="text-xs font-bold text-gray-800 mt-1">${a.name}</div>
+      <div class="text-[10px] text-gray-500 mt-0.5">${a.desc}</div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+document.querySelectorAll('.buy-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const item = btn.dataset.item;
+    const cost = parseInt(btn.dataset.cost);
+    if (state.gems < cost) {
+      showModal(`<h3 class="text-xl font-bold mb-2">💎 宝石不足</h3><p class="text-gray-600">完成更多任务来赚宝石！</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">好的</button>`);
+      return;
+    }
+    state.gems -= cost;
+    if (item === 'hearts') state.hearts = 5;
+    else if (item === 'streak_freeze') state.streakFreezes++;
+    else if (item === 'mystery') {
+      const reward = 20 + Math.floor(Math.random() * 31);
+      state.totalXp += reward; state.todayXp += reward;
+      showModal(`<h3 class="text-2xl font-bold mb-2">🎁 神秘宝箱</h3><p class="text-4xl text-yellow-500 font-bold">+${reward} XP</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">太棒了！</button>`);
+    } else if (item === 'double_xp') state.doubleXp += 2;
+    saveState(); updateTopBar(); updateDaily();
+  });
+});
+
+function startLesson(unit, isPractice = false) {
+  currentLesson = { ...unit, isPractice };
+  currentQuestionIdx = 0; correctCount = 0;
+  lessonStartTime = Date.now();
+  currentUnitWords = getUnitWords(unit);
+  lessonQuestions = generateQuestions(currentUnitWords, isPractice, unit);
+  $('lesson-hearts').textContent = state.hearts;
+  showScreen('lesson');
+  renderQuestion();
+}
+
+function generateQuestions(words, isPractice, unit) {
+  let pool = isPractice ? collectAllLearnedWords() : words;
+  if (pool.length < 4) pool = words;
+  const qs = [];
+  words.forEach((w, i) => {
+    const types = ['choice_es_zh', 'choice_zh_es', 'listen', 'type', 'match', 'order'];
+    shuffle(types);
+    types.slice(0, 3).forEach(t => {
+      const others = pool.filter(x => x.es !== w.es);
+      shuffle(others);
+      const opts = shuffle([w, ...others.slice(0, 3)]);
+      qs.push({ type: t, word: w, options: opts, isPronunciation: unit && unit.type === 'pronunciation' });
+    });
+  });
+  return shuffle(qs).slice(0, 12);
+}
+
+function collectAllLearnedWords() {
+  const seen = new Set();
+  const all = [];
+  UNITS.forEach(u => {
+    if (isUnitCompleted(u.id) || isUnitUnlocked(u.id)) {
+      getUnitWords(u).forEach(w => { if (!seen.has(w.es)) { seen.add(w.es); all.push(w); } });
+    }
+  });
+  return all;
+}
+
+function renderQuestion() {
+  const q = lessonQuestions[currentQuestionIdx];
+  const total = lessonQuestions.length;
+  $('lesson-progress').style.width = ((currentQuestionIdx / total) * 100) + '%';
+  const area = $('question-area');
+  let html = '';
+  const correctKey = q.word.es.toLowerCase();
+
+  if (q.type === 'choice_es_zh') {
+    const headerText = q.isPronunciation ? '这个西语字母/音怎么读？' : '这个西语单词是什么意思？';
+    const mainText = q.isPronunciation ? q.word.es : q.word.es;
+    const note = q.word.note ? `<div class="text-xs text-gray-500 italic mb-2">${q.word.note}</div>` : '';
+    html = `
+      <div class="text-center">
+        <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">选择题</div>
+        <div class="text-sm text-gray-500 mb-4">${headerText}</div>
+        <div class="text-5xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
+          <button onclick="speak('${q.word.es}')" class="text-3xl hover:scale-110 transition-transform">🔊</button>
+          ${mainText}
+        </div>
+        ${note}
+        ${q.word.example ? `<div class="text-xs text-gray-400 italic mb-6">"${q.word.example.es}"</div>` : '<div class="mb-6"></div>'}
+        <div class="grid grid-cols-1 gap-3">
+          ${q.options.map((opt, i) => `
+            <button class="option-btn relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-lg" data-correct="${opt.es === q.word.es}">
+              ${opt.zh}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (q.type === 'choice_zh_es') {
+    html = `
+      <div class="text-center">
+        <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">翻译</div>
+        <div class="text-sm text-gray-500 mb-4">「${q.word.zh}」用西语怎么说？</div>
+        <div class="text-4xl mb-2">${q.word.zh}</div>
+        ${q.word.example ? `<div class="text-xs text-gray-400 italic mb-6">"${q.word.example.zh}"</div>` : '<div class="mb-6"></div>'}
+        <div class="grid grid-cols-1 gap-3">
+          ${q.options.map((opt, i) => `
+            <button class="option-btn relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-lg flex items-center justify-center gap-2" data-correct="${opt.es === q.word.es}">
+              ${opt.es}
+              <span onclick="event.stopPropagation();speak('${opt.es}')" class="text-base opacity-60">🔊</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (q.type === 'listen') {
+    html = `
+      <div class="text-center">
+        <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">听力</div>
+        <div class="text-sm text-gray-500 mb-4">听一听，选出正确的翻译</div>
+        <button onclick="speak('${q.word.es}')" class="text-7xl mb-2 hover:scale-110 transition-transform inline-block">🔊</button>
+        <div class="text-xs text-gray-400 mb-6">点击喇叭可重听</div>
+        <div class="grid grid-cols-1 gap-3">
+          ${q.options.map((opt, i) => `
+            <button class="option-btn relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-lg" data-correct="${opt.es === q.word.es}">
+              ${opt.zh}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (q.type === 'type') {
+    html = `
+      <div class="text-center">
+        <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">拼写</div>
+        <div class="text-sm text-gray-500 mb-4">拼写这个西语单词</div>
+        <div class="text-3xl mb-2">${q.word.zh}</div>
+        <button onclick="speak('${q.word.es}')" class="text-2xl mb-4 hover:scale-110 transition-transform inline-block">🔊 听发音</button>
+        <input id="type-input" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full text-center text-2xl font-bold border-b-4 border-gray-300 bg-transparent py-3 px-4 focus:border-green-500 focus:outline-none mb-3" placeholder="输入西语...">
+        <button id="type-submit" class="btn-primary font-bold py-3 px-8 rounded-2xl w-full">检查</button>
+        <div id="type-hint" class="mt-3 text-sm text-gray-500 min-h-[20px]"></div>
+      </div>
+    `;
+  } else if (q.type === 'match') {
+    const pairs = q.options.slice(0, 4);
+    const leftItems = pairs.map(p => ({ id: p.es, text: p.es }));
+    const rightItems = shuffle(pairs.map(p => ({ id: p.es, text: p.zh })));
+    html = `
+      <div class="text-center">
+        <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">配对</div>
+        <div class="text-sm text-gray-500 mb-4">把西语和中文配起来</div>
+        <div class="grid grid-cols-2 gap-3" id="match-grid">
+          <div class="space-y-2" id="match-left">
+            ${leftItems.map((it, i) => `<button data-id="${it.id}" data-side="left" class="match-tile w-full bg-white border-2 border-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-xl">${it.text}</button>`).join('')}
+          </div>
+          <div class="space-y-2" id="match-right">
+            ${rightItems.map((it, i) => `<button data-id="${it.id}" data-side="right" class="match-tile w-full bg-white border-2 border-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-xl">${it.text}</button>`).join('')}
+          </div>
+        </div>
+        <div id="match-status" class="mt-4 text-sm text-gray-500">点击左右两边的单词进行配对</div>
+      </div>
+    `;
+  } else if (q.type === 'order') {
+    const sentence = q.word.example ? q.word.example.es : q.word.es;
+    const words = sentence.split(/\s+/).filter(w => w.length > 0);
+    const correct = words.join(' ');
+    const scrambled = shuffle([...words]);
+    html = `
+      <div class="text-center">
+        <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">排序</div>
+        <div class="text-sm text-gray-500 mb-4">按正确顺序排列成句</div>
+        <div class="text-2xl mb-2">「${q.word.zh}」</div>
+        <button onclick="speak('${correct}')" class="text-xl mb-4 hover:scale-110 transition-transform inline-block">🔊 听完整句</button>
+        <div id="order-result" class="min-h-[60px] bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl p-3 mb-4 flex flex-wrap gap-2 justify-center"></div>
+        <div id="order-pool" class="flex flex-wrap gap-2 justify-center mb-4">
+          ${scrambled.map((w, i) => `<button data-word="${w}" class="order-tile btn-secondary px-4 py-2 rounded-xl font-bold">${w}</button>`).join('')}
+        </div>
+        <button id="order-submit" class="btn-primary font-bold py-3 px-8 rounded-2xl w-full" disabled>检查</button>
+        <button id="order-clear" class="btn-secondary mt-2 px-4 py-2 rounded-xl font-bold text-sm">清除</button>
+      </div>
+    `;
+  }
+
+  area.innerHTML = html;
+  area.classList.add('bounce-in');
+  setTimeout(() => area.classList.remove('bounce-in'), 500);
+  bindQuestionEvents(q, correctKey, area);
+}
+
+function bindQuestionEvents(q, correctKey, area) {
+  if (q.type === 'type') {
+    const input = $('type-input'), submit = $('type-submit');
+    input.focus();
+    const check = () => {
+      const ans = input.value.trim().toLowerCase();
+      const ok = ans === correctKey;
+      submit.disabled = true; input.disabled = true;
+      if (ok) {
+        submit.classList.remove('btn-primary'); submit.classList.add('bg-green-500');
+        submit.textContent = '✓ 正确！';
+        playSound('correct'); correctCount++; updateXp(5);
+        setTimeout(nextQuestion, 900);
+      } else {
+        submit.classList.remove('btn-primary'); submit.classList.add('btn-danger');
+        submit.textContent = '✗ 再试一次';
+        playSound('wrong'); loseHeart();
+        area.classList.add('shake');
+        setTimeout(() => area.classList.remove('shake'), 400);
+        $('type-hint').textContent = `提示：${correctKey[0]}... (${correctKey.length} 个字符)`;
+        setTimeout(() => {
+          input.disabled = false; input.value = ''; input.focus();
+          submit.disabled = false;
+          submit.classList.remove('btn-danger'); submit.classList.add('btn-primary');
+          submit.textContent = '检查'; $('type-hint').textContent = '';
+        }, 1500);
+      }
+    };
+    submit.addEventListener('click', check);
+    input.addEventListener('keypress', e => { if (e.key === 'Enter') check(); });
+  } else if (q.type === 'match') {
+    let selected = { left: null, right: null };
+    let matched = 0;
+    const tiles = area.querySelectorAll('.match-tile');
+    const status = $('match-status');
+    const updateStatus = () => {
+      if (selected.left && selected.right) {
+        if (selected.left.dataset.id === selected.right.dataset.id) {
+          selected.left.classList.add('bg-green-100', 'border-green-500', 'opacity-50', 'pointer-events-none');
+          selected.right.classList.add('bg-green-100', 'border-green-500', 'opacity-50', 'pointer-events-none');
+          playSound('correct'); correctCount++; updateXp(3); matched++;
+          if (matched === q.options.length) {
+            status.textContent = '🎉 全部配对成功！';
+            setTimeout(nextQuestion, 1000);
+          } else status.textContent = `✓ 还剩 ${q.options.length - matched} 对`;
+        } else {
+          playSound('wrong'); loseHeart();
+          area.classList.add('shake');
+          setTimeout(() => area.classList.remove('shake'), 400);
+          status.textContent = '✗ 配错了，再试试';
+          setTimeout(() => {
+            [selected.left, selected.right].forEach(t => t.classList.remove('border-red-500', 'bg-red-50'));
+            status.textContent = '点击左右两边的单词进行配对';
+          }, 1000);
+        }
+        selected = { left: null, right: null };
+      } else if (selected.left) status.textContent = '现在选右边的中文';
+    };
+    tiles.forEach(t => {
+      t.addEventListener('click', () => {
+        t.classList.add('border-blue-500', 'bg-blue-50');
+        if (t.dataset.side === 'left') selected.left = t; else selected.right = t;
+        updateStatus();
+      });
+    });
+  } else if (q.type === 'order') {
+    const result = $('order-result'), pool = $('order-pool');
+    const submit = $('order-submit'), clear = $('order-clear');
+    const correct = q.word.example ? q.word.example.es : q.word.es;
+    const updateSubmit = () => submit.disabled = !result.textContent.trim();
+    pool.querySelectorAll('.order-tile').forEach(t => {
+      t.addEventListener('click', () => {
+        if (t.classList.contains('opacity-30')) return;
+        const word = t.dataset.word;
+        const span = document.createElement('button');
+        span.className = 'order-tile btn-primary text-white px-4 py-2 rounded-xl font-bold';
+        span.textContent = word;
+        span.addEventListener('click', () => { span.remove(); t.classList.remove('opacity-30'); updateSubmit(); });
+        result.appendChild(span); t.classList.add('opacity-30'); updateSubmit();
+      });
+    });
+    clear.addEventListener('click', () => {
+      result.innerHTML = '';
+      pool.querySelectorAll('.order-tile').forEach(t => t.classList.remove('opacity-30'));
+      updateSubmit();
+    });
+    submit.addEventListener('click', () => {
+      const built = result.textContent.trim();
+      const ok = built === correct;
+      submit.disabled = true; clear.disabled = true;
+      if (ok) {
+        submit.textContent = '✓ 完美！';
+        submit.classList.remove('btn-primary'); submit.classList.add('bg-green-500');
+        playSound('correct'); correctCount++; updateXp(8);
+        setTimeout(nextQuestion, 1000);
+      } else {
+        submit.textContent = '✗ 再试一次';
+        submit.classList.remove('btn-primary'); submit.classList.add('btn-danger');
+        playSound('wrong'); loseHeart();
+        area.classList.add('shake');
+        setTimeout(() => area.classList.remove('shake'), 400);
+        showModal(`<h3 class="text-xl font-bold mb-2">正确顺序</h3><p class="text-2xl text-gray-800 font-bold mb-2">${correct}</p><p class="text-gray-600">意思是：${q.word.example ? q.word.example.zh : q.word.zh}</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">继续</button>`);
+        setTimeout(() => {
+          submit.disabled = false; clear.disabled = false;
+          submit.textContent = '检查';
+          submit.classList.remove('btn-danger'); submit.classList.add('btn-primary');
+          clear.click();
+        }, 2000);
+      }
+    });
+  } else {
+    const buttons = area.querySelectorAll('.option-btn');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.disabled = true);
+        const ok = btn.dataset.correct === 'true';
+        if (ok) {
+          btn.classList.add('option-correct');
+          playSound('correct'); correctCount++; updateXp(5);
+          setTimeout(nextQuestion, 1000);
+        } else {
+          btn.classList.add('option-wrong');
+          playSound('wrong'); loseHeart();
+          area.classList.add('shake');
+          setTimeout(() => area.classList.remove('shake'), 400);
+          setTimeout(() => {
+            buttons.forEach(b => { if (b.dataset.correct === 'true') b.classList.add('option-correct'); });
+            setTimeout(nextQuestion, 1500);
+          }, 800);
+        }
+      });
+    });
+  }
+}
+
+function loseHeart() {
+  if (state.hearts > 0) {
+    state.hearts--;
+    $('lesson-hearts').textContent = state.hearts;
+    $('hearts').textContent = state.hearts;
+    if (state.hearts === 0) {
+      setTimeout(() => {
+        showModal(`<h3 class="text-2xl font-bold mb-2 text-red-500">💔 红心用完了</h3><p class="text-gray-600 mb-2">用 50 宝石补充，或休息一下明天再来！</p><button onclick="buyHearts()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">💎 50 补充</button><button onclick="endLessonByHearts()" class="btn-secondary px-4 py-2 rounded-2xl font-bold mt-2 w-full">结束课程</button>`);
+      }, 800);
+    }
+  }
+}
+
+function buyHearts() {
+  if (state.gems >= 50) {
+    state.gems -= 50; state.hearts = 5; saveState();
+    updateTopBar(); $('lesson-hearts').textContent = state.hearts; closeModal();
+  } else {
+    showModal(`<h3 class="text-xl font-bold mb-2">💎 宝石不足</h3><p class="text-gray-600">完成更多任务来赚宝石！</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">好的</button>`);
+  }
+}
+
+function endLessonByHearts() { closeModal(); finishLesson(true); }
+
+function updateXp(amount) {
+  const doubled = state.doubleXp > 0 ? amount * 2 : amount;
+  state.totalXp += doubled; state.todayXp += doubled;
+  if (state.doubleXp > 0) state.doubleXp--;
+  saveState(); updateTopBar(); updateDaily();
+}
+
+function nextQuestion() {
+  currentQuestionIdx++;
+  if (currentQuestionIdx >= lessonQuestions.length) finishLesson();
+  else renderQuestion();
+}
+
+function finishLesson(endedEarly = false) {
+  const total = lessonQuestions.length;
+  const idx = endedEarly ? Math.max(1, currentQuestionIdx) : total;
+  const accuracy = Math.round((correctCount / idx) * 100);
+  let xpEarned = correctCount * 5;
+  if (state.doubleXp > 0) xpEarned *= 2;
+  xpEarned = Math.max(5, xpEarned);
+  const timeSpent = Math.round((Date.now() - lessonStartTime) / 1000);
+
+  if (!endedEarly && currentLesson && !currentLesson.isPractice) {
+    const unitId = currentLesson.id;
+    let crowns = state.unitCrowns[unitId] || 0;
+    if (accuracy >= 80 && crowns < 5) {
+      crowns = Math.min(5, crowns + 1);
+      state.unitCrowns[unitId] = crowns;
+    }
+    if (!state.completedUnits.includes(unitId)) {
+      state.completedUnits.push(unitId);
+      state.wordsLearned += (currentLesson.words || currentLesson.items).length;
+    }
+  }
+  state.totalLessons++;
+  if (accuracy === 100) state.perfectLessons++;
+
+  const today = new Date().toDateString();
+  if (state.lastStreakDate !== today) {
+    if (state.lastStreakDate) {
+      const last = new Date(state.lastStreakDate);
+      const diff = (new Date(today) - last) / (1000 * 60 * 60 * 24);
+      if (diff === 1) state.streak++; else if (diff > 1) state.streak = 1;
+    } else state.streak = 1;
+    state.lastStreakDate = today;
+  }
+  const hour = new Date().getHours();
+  if (hour >= 22 || hour < 5) state.nightLearner = true;
+  if (hour < 7) state.earlyLearner = true;
+  state.lastActiveDate = today;
+  state.totalXp += xpEarned; state.todayXp += xpEarned;
+  if (state.doubleXp > 0) state.doubleXp = Math.max(0, state.doubleXp - 1);
+  if (accuracy === 100) state.gems += 5;
+  saveState();
+
+  let title, subtitle, emoji;
+  if (endedEarly) { title = '继续努力！'; subtitle = '红心用完了'; emoji = '💪'; }
+  else if (accuracy >= 90) { title = '¡Increíble!'; subtitle = '不可思议！'; emoji = '🌟'; }
+  else if (accuracy >= 80) { title = '¡Muy bien!'; subtitle = '非常好！'; emoji = '🎉'; }
+  else if (accuracy >= 60) { title = 'Bien hecho'; subtitle = '做得不错'; emoji = '👏'; }
+  else { title = '¡Ánimo!'; subtitle = '加油'; emoji = '💪'; }
+
+  $('result-title').textContent = title;
+  $('result-subtitle').textContent = subtitle;
+  $('result-emoji').textContent = emoji;
+  $('result-xp').textContent = '+' + xpEarned;
+  $('result-hearts').textContent = state.hearts;
+  $('result-time').textContent = Math.floor(timeSpent / 60) + ':' + String(timeSpent % 60).padStart(2, '0');
+  $('result-accuracy').textContent = accuracy + '%';
+  $('result-accuracy-bar').style.width = accuracy + '%';
+
+  if (accuracy >= 80 && !endedEarly) { showConfetti(); playSound('complete'); }
+  showScreen('result');
+}
+
+$('exit-lesson').addEventListener('click', () => {
+  if (confirm('确定要退出吗？进度会丢失哦。')) showScreen('learn');
+});
+$('back-home').addEventListener('click', () => showScreen('learn'));
+$('next-lesson').addEventListener('click', () => {
+  if (currentLesson.isPractice) startLesson(currentLesson, true);
+  else {
+    const nextUnit = UNITS.find(u => u.id === currentLesson.id + 1);
+    if (nextUnit && isUnitUnlocked(nextUnit.id)) startLesson(nextUnit);
+    else startLesson(currentLesson);
+  }
+});
+$('start-practice').addEventListener('click', () => {
+  const learned = UNITS.filter(u => isUnitCompleted(u.id) || isUnitUnlocked(u.id));
+  if (learned.length === 0) {
+    showModal(`<h3 class="text-xl font-bold mb-2">还没学过单词</h3><p class="text-gray-600">先完成一个单元吧！</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">好的</button>`);
+    return;
+  }
+  const allWords = [];
+  learned.forEach(u => getUnitWords(u).forEach(w => allWords.push(w)));
+  startLesson({ id: 0, title: '综合复习', words: allWords, emoji: '📚' }, true);
+});
+document.querySelectorAll('.nav-btn').forEach(b => {
+  b.addEventListener('click', () => showScreen(b.dataset.screen));
+});
+
+loadState();
+showScreen('learn');
+</script>
+</body>
+</html>
