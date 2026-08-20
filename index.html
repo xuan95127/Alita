@@ -55,6 +55,31 @@
   .gradient-card { background: linear-gradient(135deg, #58CC02 0%, #37b300 100%); }
   .word-tile { transition: all 0.2s; }
   .word-tile:active { transform: scale(0.95); }
+
+  /* 1. 圆环进度 */
+  .progress-ring { transform: rotate(-90deg); }
+  .progress-ring-circle { transition: stroke-dashoffset 0.6s ease; }
+
+  /* 2. 大庆祝 */
+  .celebration-bounce { animation: big-bounce 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+  @keyframes big-bounce { 0%{transform:scale(0) rotate(-180deg);opacity:0} 60%{transform:scale(1.2) rotate(10deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+
+  /* 3. 连击火焰 */
+  .streak-fire-big { animation: fire-big 0.5s ease-in-out infinite alternate; display:inline-block; }
+  @keyframes fire-big { 0%{transform:scale(1) rotate(-5deg)} 100%{transform:scale(1.3) rotate(5deg)} }
+  .streak-fire-huge { filter: drop-shadow(0 0 8px #ff6b00); animation: fire-huge 0.3s ease-in-out infinite alternate; }
+  @keyframes fire-huge { 0%{transform:scale(1.4) rotate(-10deg)} 100%{transform:scale(1.7) rotate(10deg)} }
+
+  /* 4. 飞勾 */
+  .fly-check { position: fixed; font-size: 80px; z-index: 200; pointer-events: none; animation: fly-to-corner 0.8s ease-in forwards; }
+  @keyframes fly-to-corner { 0% { transform: scale(0.5) translate(0,0) rotate(0); opacity: 1; } 50% { transform: scale(2) translate(40vw, -30vh) rotate(180deg); opacity: 1; } 100% { transform: scale(1) translate(45vw, -45vh) rotate(360deg); opacity: 0; } }
+  .check-burst { position: absolute; font-size: 40px; animation: burst 0.5s ease-out forwards; }
+  @keyframes burst { 0% { transform: scale(0) rotate(0); opacity: 1; } 50% { transform: scale(1.5) rotate(180deg); opacity: 1; } 100% { transform: scale(0) rotate(360deg); opacity: 0; } }
+
+  /* 5. 提醒横幅 */
+  .reminder-banner { animation: slide-down 0.4s ease-out; }
+  @keyframes slide-down { 0%{transform:translateY(-100%);opacity:0} 100%{transform:translateY(0);opacity:1} }
+
   .recording-pulse { animation: pulse-rec 1s infinite; display: inline-block; }
   @keyframes pulse-rec { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.6; } }
 </style>
@@ -77,16 +102,31 @@
 
 <main class="max-w-2xl mx-auto px-4 py-4">
   <section id="screen-learn">
+    <div id="reminder-banner-container"></div>
     <div class="gradient-card rounded-2xl p-4 text-white mb-4 shadow-lg">
-      <div class="flex items-center justify-between mb-2">
-        <div>
+      <div class="flex items-center gap-4">
+        <div class="relative w-20 h-20 flex-shrink-0">
+          <svg class="progress-ring w-20 h-20" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none"/>
+            <circle id="daily-ring-outer" cx="50" cy="50" r="42" stroke="white" stroke-width="8" fill="none"
+              stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round"
+              class="progress-ring-circle"/>
+            <circle cx="50" cy="50" r="32" stroke="rgba(255,255,255,0.2)" stroke-width="6" fill="none"/>
+            <circle id="daily-ring-inner" cx="50" cy="50" r="32" stroke="#FFC800" stroke-width="6" fill="none"
+              stroke-dasharray="201" stroke-dashoffset="201" stroke-linecap="round"
+              class="progress-ring-circle"/>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center text-white">
+            <div class="text-xs font-bold leading-none">XP</div>
+            <div class="text-sm font-bold leading-none mt-0.5" id="daily-ring-percent">0%</div>
+          </div>
+        </div>
+        <div class="flex-1">
           <div class="text-sm opacity-90">每日目标</div>
-          <div class="text-lg font-bold"><span id="daily-current">0</span> / <span id="daily-goal">30</span> XP</div>
+          <div class="text-lg font-bold"><span id="daily-current">0</span> / <span id="daily-goal">30</span></div>
+          <div class="text-xs opacity-80 mt-1" id="daily-message">开始学习吧！</div>
         </div>
         <div class="text-4xl">🎯</div>
-      </div>
-      <div class="h-3 bg-white/20 rounded-full overflow-hidden">
-        <div id="daily-progress" class="progress-bar h-full bg-white" style="width: 0%"></div>
       </div>
     </div>
     <div class="relative">
@@ -571,12 +611,134 @@ function showConfetti() {
   }
 }
 
+// 4. 飞勾：答题正确时调用
+function showFlyCheck(fromX, fromY) {
+  const check = document.createElement('div');
+  check.className = 'fly-check';
+  check.textContent = '✓';
+  check.style.color = '#58CC02';
+  check.style.left = fromX + 'px';
+  check.style.top = fromY + 'px';
+  document.body.appendChild(check);
+  setTimeout(() => check.remove(), 900);
+  // 同时多角度爆发
+  for (let i = 0; i < 6; i++) {
+    const burst = document.createElement('div');
+    burst.className = 'check-burst';
+    burst.textContent = ['✨', '⭐', '💫'][i % 3];
+    burst.style.left = (fromX + (Math.random() - 0.5) * 100) + 'px';
+    burst.style.top = (fromY + (Math.random() - 0.5) * 100) + 'px';
+    document.body.appendChild(burst);
+    setTimeout(() => burst.remove(), 600);
+  }
+}
+
+// 从元素中心位置触发飞勾
+function flyFromEl(el) {
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  showFlyCheck(r.left + r.width / 2, r.top + r.height / 2);
+}
+
+// 2. 大庆祝：单元完成时
+function showUnitCelebration(unitTitle, accuracy, xpEarned) {
+  showConfetti();
+  setTimeout(() => showConfetti(), 300);
+  showModal(`
+    <div class="text-center celebration-bounce">
+      <div class="text-6xl mb-2">🏆</div>
+      <h2 class="text-3xl font-bold text-gray-800 mb-1">¡Nivel Completado!</h2>
+      <p class="text-lg text-gray-600 mb-4">「${unitTitle}」通关！</p>
+      <div class="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-4 mb-4">
+        <div class="grid grid-cols-2 gap-3 text-center">
+          <div>
+            <div class="text-3xl mb-1">🎯</div>
+            <div class="text-2xl font-bold text-green-600">${accuracy}%</div>
+            <div class="text-xs text-gray-500">准确率</div>
+          </div>
+          <div>
+            <div class="text-3xl mb-1">⭐</div>
+            <div class="text-2xl font-bold text-yellow-600">+${xpEarned}</div>
+            <div class="text-xs text-gray-500">获得 XP</div>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-2 justify-center">
+        <button onclick="closeModal()" class="btn-secondary px-4 py-3 rounded-2xl font-bold text-sm">继续练习</button>
+        <button id="celebration-next" class="btn-primary px-4 py-3 rounded-2xl font-bold text-sm text-white">下一关 →</button>
+      </div>
+    </div>
+  `);
+  // 绑定"下一关"按钮
+  const nextBtn = $('celebration-next');
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      closeModal();
+      const nextUnit = UNITS.find(u => u.id === currentLesson.id + 1);
+      if (nextUnit) {
+        startLesson(nextUnit);
+      } else {
+        showScreen('learn');
+        renderMap();
+      }
+    });
+  }
+}
+
+// 5. 提醒横幅
+function showReminder() {
+  const today = new Date().toDateString();
+  const container = $('reminder-banner-container');
+  if (!container) return;
+  // 如果今天已经学过，不显示
+  if (state.lastStreakDate === today && state.todayXp > 0) {
+    container.innerHTML = '';
+    return;
+  }
+  // 首次访问
+  if (!state.lastStreakDate) {
+    container.innerHTML = `
+      <div class="reminder-banner gradient-card rounded-2xl p-3 text-white mb-3 shadow-lg flex items-center gap-3">
+        <div class="text-3xl">🎉</div>
+        <div class="flex-1">
+          <div class="font-bold">¡Bienvenido!</div>
+          <div class="text-xs opacity-90">开始你的西语学习之旅</div>
+        </div>
+      </div>
+    `;
+  } else {
+    // 断签回来
+    const lastDate = new Date(state.lastStreakDate);
+    const diff = (new Date(today) - lastDate) / (1000 * 60 * 60 * 24);
+    let msg = '';
+    if (diff === 1) {
+      msg = '今天还没学，继续昨天的节奏！';
+    } else if (diff >= 2 && diff < 7) {
+      msg = `断了 ${Math.floor(diff)} 天没关系，重新开始！`;
+    } else if (diff >= 7) {
+      msg = '好久不见，欢迎回来！';
+    }
+    if (msg) {
+      container.innerHTML = `
+        <div class="reminder-banner gradient-card rounded-2xl p-3 text-white mb-3 shadow-lg flex items-center gap-3">
+          <div class="text-3xl">📚</div>
+          <div class="flex-1">
+            <div class="font-bold text-sm">${msg}</div>
+          </div>
+          <button onclick="this.parentElement.remove()" class="text-white text-xl">✕</button>
+        </div>
+      `;
+    }
+  }
+}
+
 function showModal(html) { $('modal-content').innerHTML = html; $('modal').classList.remove('hidden'); }
 function closeModal() { $('modal').classList.add('hidden'); }
 $('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
 
 function updateTopBar() {
   $('streak').textContent = state.streak;
+  $('streak').className = state.streak >= 30 ? 'streak-fire-huge' : (state.streak >= 7 ? 'streak-fire-big' : 'streak-fire');
   $('gems').textContent = state.gems;
   $('xp').textContent = state.totalXp;
   $('hearts').textContent = state.hearts;
@@ -584,9 +746,16 @@ function updateTopBar() {
 
 function updateDaily() {
   const goal = 30;
+  const pct = Math.min(100, (state.todayXp / goal) * 100);
   $('daily-current').textContent = state.todayXp;
   $('daily-goal').textContent = goal;
-  $('daily-progress').style.width = Math.min(100, (state.todayXp / goal) * 100) + '%';
+  const outerR = 263.9, innerR = 201;
+  $('daily-ring-outer').style.strokeDashoffset = outerR * (1 - pct / 100);
+  $('daily-ring-inner').style.strokeDashoffset = innerR * (1 - Math.min(pct, 100) / 100);
+  $('daily-ring-percent').textContent = Math.round(pct) + '%';
+  // 鼓励语
+  const msgs = ['开始学习吧！', '加油！', '不错，继续！', '火热的节奏！', '快要完成目标了！', '今天目标达成！🎉'];
+  $('daily-message').textContent = msgs[Math.min(5, Math.floor(pct / 20))];
 }
 
 function showScreen(name) {
@@ -1551,7 +1720,7 @@ function bindQuestionEvents(q, correctKey, area) {
       if (ok) {
         submit.classList.remove('btn-primary'); submit.classList.add('bg-green-500');
         submit.textContent = '✓ 正确！';
-        playSound('correct'); correctCount++; updateXp(5);
+        playSound('correct'); correctCount++; updateXp(5); flyFromEl(submit);
         setTimeout(nextQuestion, 900);
       } else {
         submit.classList.remove('btn-primary'); submit.classList.add('btn-danger');
@@ -1580,7 +1749,7 @@ function bindQuestionEvents(q, correctKey, area) {
         if (selected.left.dataset.id === selected.right.dataset.id) {
           selected.left.classList.add('bg-green-100', 'border-green-500', 'opacity-50', 'pointer-events-none');
           selected.right.classList.add('bg-green-100', 'border-green-500', 'opacity-50', 'pointer-events-none');
-          playSound('correct'); correctCount++; updateXp(3); matched++;
+          playSound('correct'); correctCount++; updateXp(3); matched++; flyFromEl(selected.right);
           if (matched === q.options.length) {
             status.textContent = '🎉 全部配对成功！';
             setTimeout(nextQuestion, 1000);
@@ -1633,7 +1802,7 @@ function bindQuestionEvents(q, correctKey, area) {
       if (ok) {
         submit.textContent = '✓ 完美！';
         submit.classList.remove('btn-primary'); submit.classList.add('bg-green-500');
-        playSound('correct'); correctCount++; updateXp(8);
+        playSound('correct'); correctCount++; updateXp(8); flyFromEl(submit);
         setTimeout(nextQuestion, 1000);
       } else {
         submit.textContent = '✗ 再试一次';
@@ -1658,7 +1827,7 @@ function bindQuestionEvents(q, correctKey, area) {
         const ok = btn.dataset.correct === 'true';
         if (ok) {
           btn.classList.add('option-correct');
-          playSound('correct'); correctCount++; updateXp(5);
+          playSound('correct'); correctCount++; updateXp(5); flyFromEl(btn);
           setTimeout(nextQuestion, 1000);
         } else {
           btn.classList.add('option-wrong');
@@ -1721,17 +1890,21 @@ function finishLesson(endedEarly = false) {
   xpEarned = Math.max(5, xpEarned);
   const timeSpent = Math.round((Date.now() - lessonStartTime) / 1000);
 
+  let justCrowned = false;
+  let finishedUnitTitle = '';
   if (!endedEarly && currentLesson && !currentLesson.isPractice) {
     const unitId = currentLesson.id;
     let crowns = state.unitCrowns[unitId] || 0;
     if (accuracy >= 80 && crowns < 5) {
       crowns = Math.min(5, crowns + 1);
       state.unitCrowns[unitId] = crowns;
+      justCrowned = true;
     }
     if (!state.completedUnits.includes(unitId)) {
       state.completedUnits.push(unitId);
       state.wordsLearned += (currentLesson.words || currentLesson.items).length;
     }
+    finishedUnitTitle = currentLesson.title;
   }
   state.totalLessons++;
   if (accuracy === 100) state.perfectLessons++;
@@ -1771,6 +1944,10 @@ function finishLesson(endedEarly = false) {
   $('result-accuracy-bar').style.width = accuracy + '%';
 
   if (accuracy >= 80 && !endedEarly) { showConfetti(); playSound('complete'); }
+  if (justCrowned && !endedEarly) {
+    // 单元刚加冠：触发大庆祝弹窗（带下一关按钮）
+    setTimeout(() => showUnitCelebration(finishedUnitTitle, accuracy, xpEarned), 200);
+  }
   showScreen('result');
 }
 
@@ -1811,6 +1988,7 @@ document.querySelectorAll('.nav-btn').forEach(b => {
 
 loadState();
 showScreen('learn');
+showReminder();
 </script>
 </body>
 </html>
