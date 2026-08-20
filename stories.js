@@ -427,6 +427,96 @@ const STORIES = [
         answer: 1
       }
     ]
+  },
+  {
+    id: 16,
+    title: "下雨天",
+    emoji: "🌧️",
+    level: "入门",
+    sentences: [
+      { es: "Hoy llueve mucho.", zh: "今天雨下得很大。" },
+      { es: "María mira por la ventana.", zh: "玛丽亚望着窗外。" },
+      { es: "Su gato duerme en el sofá.", zh: "她的猫在沙发上睡觉。" },
+      { es: "María toma un libro y lee.", zh: "玛丽亚拿起一本书读起来。" },
+      { es: "La lluvia suena como música.", zh: "雨声像音乐一样。" }
+    ],
+    questions: [
+      {
+        q: "今天天气怎么样？",
+        options: ["下大雪", "出太阳", "下大雨", "刮大风"],
+        answer: 2
+      },
+      {
+        q: "猫在哪里？",
+        options: ["桌子上", "沙发上", "床上", "地板上"],
+        answer: 1
+      },
+      {
+        q: "玛丽亚在做什么？",
+        options: ["做饭", "听音乐", "看书", "画画"],
+        answer: 2
+      }
+    ]
+  },
+  {
+    id: 17,
+    title: "在公园里",
+    emoji: "🌳",
+    level: "入门",
+    sentences: [
+      { es: "Pedro va al parque con su papá.", zh: "佩德罗和爸爸去公园。" },
+      { es: "El parque tiene muchos árboles.", zh: "公园里有很多树。" },
+      { es: "Pedro juega con una pelota.", zh: "佩德罗在玩球。" },
+      { es: "Su papá lee el periódico.", zh: "他爸爸在读报纸。" },
+      { es: "Después, comen un helado.", zh: "之后，他们吃冰淇淋。" }
+    ],
+    questions: [
+      {
+        q: "谁和佩德罗去公园？",
+        options: ["妈妈", "爸爸", "爷爷", "朋友"],
+        answer: 1
+      },
+      {
+        q: "佩德罗在玩什么？",
+        options: ["玩具车", "皮球", "风筝", "滑梯"],
+        answer: 1
+      },
+      {
+        q: "他们最后吃了什么？",
+        options: ["蛋糕", "三明治", "冰淇淋", "水果"],
+        answer: 2
+      }
+    ]
+  },
+  {
+    id: 18,
+    title: "家庭晚餐",
+    emoji: "🍽️",
+    level: "进阶",
+    sentences: [
+      { es: "Es la hora de cenar.", zh: "晚餐时间到了。" },
+      { es: "La mesa tiene sopa, pan y ensalada.", zh: "桌上有汤、面包和沙拉。" },
+      { es: "Todos se sientan a la mesa.", zh: "大家坐到桌前。" },
+      { es: "El padre dice: 'Buen provecho'.", zh: "爸爸说：'请慢用'。" },
+      { es: "La familia habla y ríe mucho.", zh: "全家人又说又笑。" }
+    ],
+    questions: [
+      {
+        q: "桌上有什么？",
+        options: ["只有米饭", "汤、面包和沙拉", "披萨和可乐", "面条"],
+        answer: 1
+      },
+      {
+        q: "爸爸说了什么？",
+        options: ["我爱你", "请慢用", "生日快乐", "新年好"],
+        answer: 1
+      },
+      {
+        q: "家人的气氛如何？",
+        options: ["很安静", "很紧张", "很开心", "很无聊"],
+        answer: 2
+      }
+    ]
   }
 ];
 
@@ -530,6 +620,46 @@ const CONVERSATIONS = [
       { speaker: "other", es: "¡Hola, Ana! ¿Cómo estás?", zh: "你好，安娜！你好吗？" },
       { speaker: "user", prompt: true, options: [
         { text: "Muy bien, gracias. ¿Quieres salir esta tarde?", feedback: "¡Sí, me encanta la idea!" }
+      ]}
+    ]
+  },
+  {
+    id: 6, title: "在餐厅", icon: "🍕", level: "A1",
+    description: "点餐",
+    lines: [
+      { speaker: "seller", es: "¡Buenas noches! Aquí tiene el menú.", zh: "晚上好！这是菜单。" },
+      { speaker: "user", prompt: true, options: [
+        { text: "Gracias. ¿Qué recomienda?", feedback: "La paella es muy buena." },
+        { text: "No quiero comer.", feedback: "¿Solo tomar algo entonces?" }
+      ]},
+      { speaker: "seller", es: "La paella es muy buena hoy.", zh: "今天的海鲜饭很好吃。" },
+      { speaker: "user", prompt: true, options: [
+        { text: "Quiero paella, por favor.", feedback: "Excelente elección." },
+        { text: "¿Tienen pizza?", feedback: "Sí, tenemos margarita y pepperoni." }
+      ]},
+      { speaker: "seller", es: "¿Y para beber?", zh: "喝点什么？" },
+      { speaker: "user", prompt: true, options: [
+        { text: "Un vaso de agua, por favor.", feedback: "Enseguida." },
+        { text: "Una cerveza.", feedback: "Muy bien, señor." }
+      ]}
+    ]
+  },
+  {
+    id: 7, title: "问路", icon: "🗺️", level: "A2",
+    description: "问路去图书馆",
+    lines: [
+      { speaker: "user", prompt: true, options: [
+        { text: "Perdone, ¿dónde está la biblioteca?", feedback: "Siga recto dos calles." },
+        { text: "Hola, ¿cómo te llamas?", feedback: "Me llamo Carlos. ¿Necesita ayuda?" }
+      ]},
+      { speaker: "other", es: "Siga recto dos calles y gire a la derecha.", zh: "直走两个街区，然后右转。" },
+      { speaker: "user", prompt: true, options: [
+        { text: "¿Está lejos?", feedback: "A unos diez minutos caminando." },
+        { text: "Muchas gracias, adiós.", feedback: "¡De nada!" }
+      ]},
+      { speaker: "other", es: "A unos diez minutos caminando.", zh: "走路大约十分钟。" },
+      { speaker: "user", prompt: true, options: [
+        { text: "Perfecto, muchas gracias.", feedback: "¡De nada, buen día!" }
       ]}
     ]
   }

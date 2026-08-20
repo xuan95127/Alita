@@ -191,12 +191,12 @@
       <button id="open-stories" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition">
         <div class="text-3xl mb-2">📖</div>
         <div class="font-bold text-gray-800 text-sm">西语故事</div>
-        <div class="text-xs text-gray-600">15 个 · 边读边学</div>
+        <div class="text-xs text-gray-600" id="home-stories-count">15 个 · 边读边学</div>
       </button>
       <button id="open-conversations" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition">
         <div class="text-3xl mb-2">💬</div>
         <div class="font-bold text-gray-800 text-sm">情景对话</div>
-        <div class="text-xs text-gray-600">5 个场景</div>
+        <div class="text-xs text-gray-600" id="home-convs-count">5 个场景</div>
       </button>
     </div>
 
@@ -479,6 +479,58 @@ const PRONUNCIATION_LESSONS = [
       { text: "El perro de Rosa corre rápido", zh: "罗莎的狗跑得快", example: "El perro de Rosa", exampleZh: "罗莎的狗" },
       { text: "Tres tigres tragaban trigo", zh: "三只老虎在吃麦子", example: "Tres tigres", exampleZh: "三只老虎" },
       { text: "El hijo de Juan come jamón", zh: "胡安的儿子吃火腿", example: "hijo come jamón", exampleZh: "儿子吃火腿" }
+    ]
+  },
+  {
+    id: 7, title: "颜色 Los Colores", emoji: "🌈", level: "入门",
+    description: "缤纷色彩词汇",
+    items: [
+      { text: "rojo", zh: "红色", example: "el coche rojo", exampleZh: "红色汽车" },
+      { text: "azul", zh: "蓝色", example: "el cielo azul", exampleZh: "蓝天" },
+      { text: "verde", zh: "绿色", example: "la hoja verde", exampleZh: "绿叶" },
+      { text: "amarillo", zh: "黄色", example: "el sol amarillo", exampleZh: "黄色的太阳" },
+      { text: "blanco", zh: "白色", example: "la nieve blanca", exampleZh: "白雪" },
+      { text: "negro", zh: "黑色", example: "el gato negro", exampleZh: "黑猫" },
+      { text: "rosa", zh: "粉色", example: "la flor rosa", exampleZh: "粉色的花" }
+    ]
+  },
+  {
+    id: 8, title: "食物 La Comida", emoji: "🍎", level: "入门",
+    description: "美味西语词汇",
+    items: [
+      { text: "agua", zh: "水", example: "agua fría", exampleZh: "冰水" },
+      { text: "pan", zh: "面包", example: "pan fresco", exampleZh: "新鲜面包" },
+      { text: "leche", zh: "牛奶", example: "leche caliente", exampleZh: "热牛奶" },
+      { text: "manzana", zh: "苹果", example: "una manzana roja", exampleZh: "一个红苹果" },
+      { text: "arroz", zh: "米饭", example: "arroz con pollo", exampleZh: "鸡肉饭" },
+      { text: "queso", zh: "奶酪", example: "queso manchego", exampleZh: "曼彻格奶酪" },
+      { text: "Quiero comer", zh: "我想吃", example: "Quiero comer pizza", exampleZh: "我想吃披萨" }
+    ]
+  },
+  {
+    id: 9, title: "家人 La Familia", emoji: "👨‍👩‍👧", level: "入门",
+    description: "家庭成员称呼",
+    items: [
+      { text: "mamá", zh: "妈妈", example: "mi mamá es amable", exampleZh: "我妈妈很温柔" },
+      { text: "papá", zh: "爸爸", example: "papá trabaja", exampleZh: "爸爸在工作" },
+      { text: "hermano", zh: "兄弟", example: "mi hermano mayor", exampleZh: "我哥哥" },
+      { text: "hermana", zh: "姐妹", example: "mi hermana menor", exampleZh: "我妹妹" },
+      { text: "abuelo", zh: "爷爷/外公", example: "el abuelo cuenta", exampleZh: "爷爷讲故事" },
+      { text: "abuela", zh: "奶奶/外婆", example: "la abuela cocina", exampleZh: "奶奶在做饭" },
+      { text: "Te quiero", zh: "我爱你", example: "Te quiero mucho", exampleZh: "我非常爱你" }
+    ]
+  },
+  {
+    id: 10, title: "季节天气", emoji: "⛅", level: "进阶",
+    description: "描述天气和季节",
+    items: [
+      { text: "sol", zh: "太阳", example: "Hace sol", exampleZh: "出太阳" },
+      { text: "lluvia", zh: "雨", example: "Llueve mucho", exampleZh: "雨下得很大" },
+      { text: "nieve", zh: "雪", example: "Nieva en la montaña", exampleZh: "山上在下雪" },
+      { text: "verano", zh: "夏天", example: "el verano caluroso", exampleZh: "炎热的夏天" },
+      { text: "invierno", zh: "冬天", example: "el invierno frío", exampleZh: "寒冷的冬天" },
+      { text: "primavera", zh: "春天", example: "flores de primavera", exampleZh: "春天的花" },
+      { text: "Hace calor", zh: "天气热", example: "Hoy hace calor", exampleZh: "今天很热" }
     ]
   }
 ];
@@ -809,6 +861,9 @@ function updateHomeStats() {
   const total = UNITS.length;
   const done = UNITS.filter(u => isUnitCompleted(u.id)).length;
   $('units-progress-label').textContent = `${done} / ${total}`;
+  // 故事和对话数（动态）
+  if (typeof STORIES !== 'undefined') $('home-stories-count').textContent = `${STORIES.length} 个 · 边读边学`;
+  if (typeof CONVERSATIONS !== 'undefined') $('home-convs-count').textContent = `${CONVERSATIONS.length} 个场景`;
   // 问候语（按时间）
   const hour = new Date().getHours();
   let greet = '¡Hola!';
