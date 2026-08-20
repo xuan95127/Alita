@@ -409,8 +409,7 @@ const UNITS = [
       { es: "espinaca", zh: "菠菜", example: { es: "Espinacas.", zh: "菠菜。" } },
       { es: "champiñón", zh: "蘑菇", example: { es: "Champiñones.", zh: "蘑菇。" } }
     ]
-  }
-];
+  },
 
   // ============ Unit 10: 动物世界 ============
   {
@@ -580,8 +579,7 @@ const UNITS = [
       { es: "llave", zh: "钥匙", example: { es: "Las llaves.", zh: "钥匙。" } },
       { es: "candado", zh: "锁", example: { es: "Candado seguro.", zh: "安全的锁。" } }
     ]
-  }
-];
+  },
 
   // ============ Unit 13: 城市地点 ============
   {
@@ -903,8 +901,7 @@ const UNITS = [
       { es: "fiesta", zh: "节日", example: { es: "Fiesta nacional.", zh: "国庆节。" } },
       { es: "celebración", zh: "庆典", example: { es: "Gran celebración.", zh: "盛大庆典。" } }
     ]
-  }
-];
+  },
 
   // ============ Unit 19: 形容词 ============
   {
