@@ -6,7 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Mini Español">
-<link rel="manifest" href="./manifest.json">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="manifest" href="./manifest.json?ver=2">
 <title>🦉 Mini Español - 小小西语</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -460,8 +463,8 @@
   </div>
 </div>
 
-<script src="./content.js"></script>
-<script src="./stories.js"></script>
+<script src="./content.js?v=2"></script>
+<script src="./stories.js?v=2"></script>
 <script>
 // ==================== 发音练习课程 ====================
 const PRONUNCIATION_LESSONS = [
@@ -2651,13 +2654,24 @@ document.querySelectorAll('.nav-btn').forEach(b => {
 });
 
 loadState();
-if (family.profiles.length === 0) {
-  // 全新用户：弹出创建向导
-  openAddProfileWizard();
-} else {
-  updateProfileButton();
-  showScreen('learn');
-  showReminder();
+try {
+  if (family.profiles.length === 0) {
+    // 全新用户：弹出创建向导
+    openAddProfileWizard();
+  } else {
+    updateProfileButton();
+    showScreen('learn');
+    showReminder();
+  }
+} catch (e) {
+  // 出错时至少显示空首页 + 错误提示（方便排查）
+  console.error('Init error:', e);
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#FF4B4B;color:white;padding:12px;font-size:13px;z-index:9999;font-family:monospace;word-break:break-all;';
+  banner.textContent = '⚠️ 加载出错：' + e.message + ' (请截图发给爸爸)';
+  document.body.appendChild(banner);
+  // 兜底：清空旧数据让用户能重试
+  // 不动 localStorage，避免误删数据
 }
 </script>
 </body>
