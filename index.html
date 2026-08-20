@@ -1833,58 +1833,51 @@ function startStoryRecording(s) {
   speak(s.es);
   // 延迟 1.5 秒后开始录（避免录到播放声）
   setTimeout(() => {
-    startRecording(s.es,
-      (recognized) => {
-        recordBtn.disabled = false;
-        listenBtn.disabled = false;
-        const sim = similarity(recognized, s.es);
-        const passed = sim >= 0.5;
-        if (passed) {
-          status.innerHTML = `
-            <div class="bg-green-50 border-2 border-green-300 rounded-2xl p-3 bounce-in">
-              <div class="text-3xl mb-1">✓ 太棒了！</div>
-              <div class="text-sm text-gray-600 mb-1">你读的是：<b>${recognized || '(没听清)'}</b></div>
-              <div class="text-sm text-green-600 font-bold">相似度 ${Math.round(sim * 100)}%</div>
-            </div>
-          `;
-          playSound('correct');
-          nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-          nextBtn.disabled = false;
-          recordBtn.innerHTML = '<span class="text-xl">✓</span> 已通过';
-          recordBtn.disabled = true;
-          listenBtn.disabled = false;
-          nextBtn.addEventListener('click', () => { storySentenceIdx++; renderStorySentence(); });
-        } else {
-          status.innerHTML = `
-            <div class="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-3">
-              <div class="text-2xl mb-1">🤔 差一点</div>
-              <div class="text-sm text-gray-600">你说：<b>${recognized || '(没听清)'}</b></div>
-              <div class="text-sm text-gray-500 mt-1">目标：<b>${s.es}</b></div>
-              <div class="text-sm text-yellow-700 mb-2">相似度 ${Math.round(sim * 100)}%（需 50%）</div>
-              <div class="flex gap-2 justify-center">
-                <button id="story-retry" class="btn-danger text-white font-bold py-2 px-4 rounded-xl text-sm">🎤 重试</button>
-                <button id="story-skip" class="btn-secondary font-bold py-2 px-4 rounded-xl text-sm">跳过</button>
-              </div>
-            </div>
-          `;
-          playSound('wrong');
-          $('story-retry').addEventListener('click', () => { recordBtn.disabled = false; listenBtn.disabled = false; startStoryRecording(s); });
-          $('story-skip').addEventListener('click', () => { storySentenceIdx++; renderStorySentence(); });
-        }
-      },
-      (err) => {
-        recordBtn.disabled = false;
-        listenBtn.disabled = false;
-        let msg = '录音失败';
-        if (err === 'no-speech') msg = '没听到声音，再试一次';
-        else if (err === 'not-allowed') msg = '请允许麦克风权限';
-        else if (err === 'audio-capture') msg = '找不到麦克风';
-        else if (typeof err === 'string' && err.includes('不支持')) msg = '你的浏览器不支持录音';
-        status.innerHTML = `<div class="bg-red-50 rounded-xl p-3"><div class="text-red-500 text-sm mb-2">⚠️ ${msg}</div><div class="flex gap-2 justify-center"><button id="story-retry" class="btn-primary text-white font-bold py-1 px-3 rounded-lg text-sm">重试</button><button id="story-skip-err" class="btn-secondary font-bold py-1 px-3 rounded-lg text-sm">跳过</button></div></div>`;
+    startRecording(s.es, (recognized, confidence, errorMsg) => {
+      recordBtn.disabled = false;
+      listenBtn.disabled = false;
+      if (errorMsg) {
+        // 错误处理
+        status.innerHTML = `<div class="bg-red-50 rounded-xl p-3"><div class="text-red-500 text-sm mb-2">⚠️ ${errorMsg}</div><div class="flex gap-2 justify-center"><button id="story-retry" class="btn-primary text-white font-bold py-1 px-3 rounded-lg text-sm">重试</button><button id="story-skip-err" class="btn-secondary font-bold py-1 px-3 rounded-lg text-sm">跳过</button></div></div>`;
         $('story-retry').addEventListener('click', () => { recordBtn.disabled = false; listenBtn.disabled = false; startStoryRecording(s); });
         $('story-skip-err').addEventListener('click', () => { storySentenceIdx++; renderStorySentence(); });
+        return;
       }
-    );
+      const sim = similarity(recognized, s.es);
+      const passed = sim >= 0.5;
+      if (passed) {
+        status.innerHTML = `
+          <div class="bg-green-50 border-2 border-green-300 rounded-2xl p-3 bounce-in">
+            <div class="text-3xl mb-1">✓ 太棒了！</div>
+            <div class="text-sm text-gray-600 mb-1">你读的是：<b>${recognized || '(没听清)'}</b></div>
+            <div class="text-sm text-green-600 font-bold">相似度 ${Math.round(sim * 100)}%</div>
+          </div>
+        `;
+        playSound('correct');
+        nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        nextBtn.disabled = false;
+        recordBtn.innerHTML = '<span class="text-xl">✓</span> 已通过';
+        recordBtn.disabled = true;
+        listenBtn.disabled = false;
+        nextBtn.addEventListener('click', () => { storySentenceIdx++; renderStorySentence(); });
+      } else {
+        status.innerHTML = `
+          <div class="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-3">
+            <div class="text-2xl mb-1">🤔 差一点</div>
+            <div class="text-sm text-gray-600">你说：<b>${recognized || '(没听清)'}</b></div>
+            <div class="text-sm text-gray-500 mt-1">目标：<b>${s.es}</b></div>
+            <div class="text-sm text-yellow-700 mb-2">相似度 ${Math.round(sim * 100)}%（需 50%）</div>
+            <div class="flex gap-2 justify-center">
+              <button id="story-retry" class="btn-danger text-white font-bold py-2 px-4 rounded-xl text-sm">🎤 重试</button>
+              <button id="story-skip" class="btn-secondary font-bold py-2 px-4 rounded-xl text-sm">跳过</button>
+            </div>
+          </div>
+        `;
+        playSound('wrong');
+        $('story-retry').addEventListener('click', () => { recordBtn.disabled = false; listenBtn.disabled = false; startStoryRecording(s); });
+        $('story-skip').addEventListener('click', () => { storySentenceIdx++; renderStorySentence(); });
+      }
+    }, 8000);
   }, 1500);
 }
 
@@ -2027,7 +2020,7 @@ function similarity(a, b) {
   return matches / aWords.length;
 }
 
-function startRecording(targetText, onResult) {
+function startRecording(targetText, onResult, timeoutMs = 6000) {
   if (!recognition && !initSpeechRecognition()) return;
   isRecording = true;
   let resultReceived = false;
@@ -2035,7 +2028,7 @@ function startRecording(targetText, onResult) {
     if (isRecording && recognition) {
       try { recognition.stop(); } catch (e) {}
     }
-  }, 8000);
+  }, timeoutMs);
   recognition.onresult = (event) => {
     resultReceived = true;
     clearTimeout(timeoutId);
@@ -2350,65 +2343,60 @@ function startConvRecording(targetText, feedbackText) {
   status.innerHTML = '<div class="text-red-500 font-bold flex items-center justify-center gap-2"><span class="recording-pulse">🔴</span> 正在听...</div>';
   speak(targetText);
   setTimeout(() => {
-    startRecording(targetText,
-      (recognized) => {
-        if (recordBtn) recordBtn.disabled = false;
-        if (listenBtn) listenBtn.disabled = false;
-        const sim = similarity(recognized, targetText);
-        const passed = sim >= 0.5;
-        if (passed) {
-          status.innerHTML = `
-            <div class="bg-green-50 border-2 border-green-300 rounded-xl p-3 bounce-in">
-              <div class="text-2xl mb-1">✓ 太棒了！</div>
-              <div class="text-xs text-gray-600">你读的是：<b>${recognized || '(没听清)'}</b></div>
-              <div class="text-xs text-green-600 font-bold">相似度 ${Math.round(sim * 100)}%</div>
-            </div>
-          `;
-          playSound('correct');
-          if (recordBtn) {
-            recordBtn.innerHTML = '<span class="text-xl">✓</span> 已通过';
-            recordBtn.disabled = true;
-          }
-          if (listenBtn) listenBtn.disabled = false;
-          // 解锁下一句按钮
-          const nextBtn = $('conv-next');
-          if (nextBtn) {
-            nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            nextBtn.disabled = false;
-          }
-        } else {
-          status.innerHTML = `
-            <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3">
-              <div class="text-base mb-1">🤔 差一点</div>
-              <div class="text-xs text-gray-600">你说：<b>${recognized || '(没听清)'}</b></div>
-              <div class="text-xs text-gray-500">目标：<b>${targetText}</b></div>
-              <div class="text-xs text-yellow-700">相似度 ${Math.round(sim * 100)}%</div>
-              <div class="flex gap-2 justify-center mt-2">
-                <button id="conv-retry" class="btn-danger text-white font-bold py-1 px-3 rounded-lg text-xs">🎤 重试</button>
-                <button id="conv-skip-pron" class="btn-secondary font-bold py-1 px-3 rounded-lg text-xs">跳过</button>
-              </div>
-            </div>
-          `;
-          playSound('wrong');
-          $('conv-retry').addEventListener('click', () => startConvRecording(targetText, feedbackText));
-          $('conv-skip-pron').addEventListener('click', () => {
-            if (recordBtn) recordBtn.disabled = true;
-            const nextBtn = $('conv-next');
-            if (nextBtn) { nextBtn.classList.remove('opacity-50', 'cursor-not-allowed'); nextBtn.disabled = false; }
-          });
-        }
-      },
-      (err) => {
-        if (recordBtn) recordBtn.disabled = false;
-        if (listenBtn) listenBtn.disabled = false;
-        let msg = '录音失败';
-        if (err === 'no-speech') msg = '没听到声音';
-        else if (err === 'not-allowed') msg = '请允许麦克风';
-        status.innerHTML = `<div class="bg-red-50 rounded-xl p-2 text-sm"><span class="text-red-500">⚠️ ${msg}</span> <button id="conv-retry" class="btn-primary text-white font-bold py-1 px-2 rounded text-xs">重试</button> <button id="conv-skip-err" class="btn-secondary font-bold py-1 px-2 rounded text-xs">跳过</button></div>`;
+    startRecording(targetText, (recognized, confidence, errorMsg) => {
+      if (recordBtn) recordBtn.disabled = false;
+      if (listenBtn) listenBtn.disabled = false;
+      if (errorMsg) {
+        // 错误处理
+        status.innerHTML = `<div class="bg-red-50 rounded-xl p-2 text-sm"><span class="text-red-500">⚠️ ${errorMsg}</span> <button id="conv-retry" class="btn-primary text-white font-bold py-1 px-2 rounded text-xs">重试</button> <button id="conv-skip-err" class="btn-secondary font-bold py-1 px-2 rounded text-xs">跳过</button></div>`;
         $('conv-retry').addEventListener('click', () => startConvRecording(targetText, feedbackText));
         $('conv-skip-err').addEventListener('click', () => { convLineIdx++; renderConvLine(); });
+        return;
       }
-    );
+      const sim = similarity(recognized, targetText);
+      const passed = sim >= 0.5;
+      if (passed) {
+        status.innerHTML = `
+          <div class="bg-green-50 border-2 border-green-300 rounded-xl p-3 bounce-in">
+            <div class="text-2xl mb-1">✓ 太棒了！</div>
+            <div class="text-xs text-gray-600">你读的是：<b>${recognized || '(没听清)'}</b></div>
+            <div class="text-xs text-green-600 font-bold">相似度 ${Math.round(sim * 100)}%</div>
+          </div>
+        `;
+        playSound('correct');
+        if (recordBtn) {
+          recordBtn.innerHTML = '<span class="text-xl">✓</span> 已通过';
+          recordBtn.disabled = true;
+        }
+        if (listenBtn) listenBtn.disabled = false;
+        // 解锁下一句按钮
+        const nextBtn = $('conv-next');
+        if (nextBtn) {
+          nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+          nextBtn.disabled = false;
+        }
+      } else {
+        status.innerHTML = `
+          <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3">
+            <div class="text-base mb-1">🤔 差一点</div>
+            <div class="text-xs text-gray-600">你说：<b>${recognized || '(没听清)'}</b></div>
+            <div class="text-xs text-gray-500">目标：<b>${targetText}</b></div>
+            <div class="text-xs text-yellow-700">相似度 ${Math.round(sim * 100)}%</div>
+            <div class="flex gap-2 justify-center mt-2">
+              <button id="conv-retry" class="btn-danger text-white font-bold py-1 px-3 rounded-lg text-xs">🎤 重试</button>
+              <button id="conv-skip-pron" class="btn-secondary font-bold py-1 px-3 rounded-lg text-xs">跳过</button>
+            </div>
+          </div>
+        `;
+        playSound('wrong');
+        $('conv-retry').addEventListener('click', () => startConvRecording(targetText, feedbackText));
+        $('conv-skip-pron').addEventListener('click', () => {
+          if (recordBtn) recordBtn.disabled = true;
+          const nextBtn = $('conv-next');
+          if (nextBtn) { nextBtn.classList.remove('opacity-50', 'cursor-not-allowed'); nextBtn.disabled = false; }
+        });
+      }
+    }, 8000);
   }, 1500);
 }
 
