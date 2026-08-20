@@ -55,6 +55,8 @@
   .gradient-card { background: linear-gradient(135deg, #58CC02 0%, #37b300 100%); }
   .word-tile { transition: all 0.2s; }
   .word-tile:active { transform: scale(0.95); }
+  .recording-pulse { animation: pulse-rec 1s infinite; display: inline-block; }
+  @keyframes pulse-rec { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.6; } }
 </style>
 </head>
 <body class="bg-gray-100 min-h-screen pb-20">
@@ -168,6 +170,26 @@
       </div>
     </div>
     <div id="conv-content" class="bg-white rounded-2xl p-6 shadow-lg min-h-[400px]"></div>
+  </section>
+
+  <section id="screen-pronunciation" class="hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button id="back-from-pronunciation" class="text-2xl">←</button>
+      <h2 class="text-2xl font-bold text-gray-800">🗣️ 发音练习</h2>
+    </div>
+    <p class="text-sm text-gray-600 mb-4">从基础音开始 · 听 + 跟读 + AI 评分</p>
+    <div id="pronunciation-list" class="space-y-2"></div>
+  </section>
+
+  <section id="screen-pronunciation-practice" class="hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button id="back-from-pron-practice" class="text-2xl">←</button>
+      <div class="flex-1">
+        <h2 class="text-xl font-bold text-gray-800" id="prn-title">发音练习</h2>
+        <div class="text-xs text-gray-500" id="prn-progress">第 1 题</div>
+      </div>
+    </div>
+    <div id="prn-content" class="bg-white rounded-2xl p-6 shadow-lg min-h-[450px]"></div>
   </section>
 
   <section id="screen-pronunciation" class="hidden">
@@ -306,6 +328,83 @@
 <script src="./content.js"></script>
 <script src="./stories.js"></script>
 <script>
+// ==================== 发音练习课程 ====================
+const PRONUNCIATION_LESSONS = [
+  {
+    id: 1, title: "元音 A E I O U", emoji: "🔤", level: "入门",
+    description: "西语 5 个元音，纯正发音",
+    items: [
+      { text: "a", zh: "啊", example: "casa", exampleZh: "房子" },
+      { text: "e", zh: "诶", example: "mesa", exampleZh: "桌子" },
+      { text: "i", zh: "衣", example: "misa", exampleZh: "弥撒" },
+      { text: "o", zh: "哦", example: "boca", exampleZh: "嘴" },
+      { text: "u", zh: "乌", example: "luna", exampleZh: "月亮" },
+      { text: "ama", zh: "爱", example: "ama a su mamá", exampleZh: "爱他的妈妈" },
+      { text: "mesa", zh: "桌子", example: "la mesa grande", exampleZh: "大桌子" },
+      { text: "luna", zh: "月亮", example: "luna llena", exampleZh: "满月" }
+    ]
+  },
+  {
+    id: 2, title: "问候短语", emoji: "👋", level: "入门",
+    description: "日常问候跟读",
+    items: [
+      { text: "Hola", zh: "你好", example: "¡Hola amigo!", exampleZh: "你好朋友！" },
+      { text: "Buenos días", zh: "早上好", example: "Buenos días profesor", exampleZh: "老师早上好" },
+      { text: "Buenas noches", zh: "晚上好", example: "Buenas noches mamá", exampleZh: "妈妈晚安" },
+      { text: "¿Cómo estás?", zh: "你好吗？", example: "¿Cómo estás hoy?", exampleZh: "今天怎么样？" },
+      { text: "Estoy bien", zh: "我很好", example: "Estoy bien, gracias", exampleZh: "我很好，谢谢" },
+      { text: "Muchas gracias", zh: "非常感谢", example: "Muchas gracias por todo", exampleZh: "非常感谢一切" }
+    ]
+  },
+  {
+    id: 3, title: "数字 1-10", emoji: "🔢", level: "入门",
+    description: "西语数字发音",
+    items: [
+      { text: "uno", zh: "一", example: "uno, dos, tres", exampleZh: "一，二，三" },
+      { text: "dos", zh: "二", example: "dos gatos", exampleZh: "两只猫" },
+      { text: "tres", zh: "三", example: "tres libros", exampleZh: "三本书" },
+      { text: "cuatro", zh: "四", example: "cuatro amigos", exampleZh: "四个朋友" },
+      { text: "cinco", zh: "五", example: "cinco minutos", exampleZh: "五分钟" },
+      { text: "diez", zh: "十", example: "diez dedos", exampleZh: "十根手指" }
+    ]
+  },
+  {
+    id: 4, title: "特色发音", emoji: "🌟", level: "进阶",
+    description: "西语特有的发音：rr 卷舌、ñ、ll、j",
+    items: [
+      { text: "perro", zh: "狗", example: "el perro grande", exampleZh: "大狗", highlight: "rr" },
+      { text: "pero", zh: "但是", example: "sí, pero no", exampleZh: "是，但不", highlight: "r" },
+      { text: "año", zh: "年", example: "un año", exampleZh: "一年", highlight: "ñ" },
+      { text: "mañana", zh: "明天", example: "hasta mañana", exampleZh: "明天见", highlight: "ñ" },
+      { text: "llave", zh: "钥匙", example: "la llave", exampleZh: "钥匙", highlight: "ll" },
+      { text: "lluvia", zh: "雨", example: "lluvia fuerte", exampleZh: "大雨", highlight: "ll" },
+      { text: "joven", zh: "年轻人", example: "joven alto", exampleZh: "高个年轻人", highlight: "j" },
+      { text: "hijo", zh: "儿子", example: "mi hijo", exampleZh: "我的儿子", highlight: "h" }
+    ]
+  },
+  {
+    id: 5, title: "日常实用句", emoji: "💬", level: "进阶",
+    description: "每天用得到的句子",
+    items: [
+      { text: "No entiendo", zh: "我不懂", example: "No entiendo, repite", exampleZh: "不懂，再说一遍" },
+      { text: "Más despacio", zh: "慢一点", example: "Más despacio por favor", exampleZh: "请慢一点" },
+      { text: "¿Cómo se dice?", zh: "怎么说？", example: "¿Cómo se dice en español?", exampleZh: "西语怎么说？" },
+      { text: "¿Cuánto cuesta?", zh: "多少钱？", example: "¿Cuánto cuesta esto?", exampleZh: "这个多少钱？" },
+      { text: "¿Dónde está el baño?", zh: "洗手间在哪？", example: "¿Dónde está el baño?", exampleZh: "洗手间在哪？" },
+      { text: "La cuenta, por favor", zh: "请买单", example: "La cuenta por favor", exampleZh: "请买单" }
+    ]
+  },
+  {
+    id: 6, title: "绕口令挑战", emoji: "🔥", level: "高阶",
+    description: "高难度发音挑战",
+    items: [
+      { text: "El perro de Rosa corre rápido", zh: "罗莎的狗跑得快", example: "El perro de Rosa", exampleZh: "罗莎的狗" },
+      { text: "Tres tigres tragaban trigo", zh: "三只老虎在吃麦子", example: "Tres tigres", exampleZh: "三只老虎" },
+      { text: "El hijo de Juan come jamón", zh: "胡安的儿子吃火腿", example: "hijo come jamón", exampleZh: "儿子吃火腿" }
+    ]
+  }
+];
+
 // ==================== 成就定义 ====================
 const ACHIEVEMENTS = [
   { id: 'first_lesson', emoji: '🌱', name: '初学者', desc: '完成第一节课', check: s => s.completedUnits.length >= 1 },
@@ -563,7 +662,7 @@ function updateDaily() {
 }
 
 function showScreen(name) {
-  ['learn', 'lesson', 'result', 'quests', 'shop', 'profile', 'stories', 'story', 'conversations', 'conversation', 'pronunciation'].forEach(s => $(`screen-${s}`).classList.add('hidden'));
+  ['learn', 'lesson', 'result', 'quests', 'shop', 'profile', 'stories', 'story', 'conversations', 'conversation', 'pronunciation', 'pronunciation-practice'].forEach(s => $(`screen-${s}`).classList.add('hidden'));
   $(`screen-${name}`).classList.remove('hidden');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (['learn', 'quests', 'shop', 'profile'].includes(name)) {
@@ -586,128 +685,9 @@ let pronScore = 0;
 let pronUnit = null;
 
 function openPronunciation() {
-  pronUnit = UNITS.find(u => u.type === 'pronunciation');
-  if (!pronUnit) return;
-  pronIdx = 0;
-  pronScore = 0;
-  $('pron-progress').textContent = `1/${pronUnit.items.length}`;
+  renderPronunciationList();
   showScreen('pronunciation');
-  renderPronItem();
 }
-
-function renderPronItem() {
-  if (pronIdx >= pronUnit.items.length) {
-    finishPronunciation();
-    return;
-  }
-  const item = pronUnit.items[pronIdx];
-  const audioExample = item.example ? item.example.es : item.es;
-  $('pron-content').innerHTML = `
-    <div class="text-center">
-      <div class="text-xs text-gray-400 mb-2">${pronIdx + 1} / ${pronUnit.items.length}</div>
-      <div class="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-8 mb-4">
-        <div class="text-7xl font-bold text-pink-600 mb-2" style="font-family: 'Times New Roman', serif;">${item.es}</div>
-        <div class="text-lg text-gray-700 font-medium">${item.zh}</div>
-        ${item.note ? `<div class="text-sm text-gray-500 italic mt-2">${item.note}</div>` : ''}
-      </div>
-      <div class="mb-4">
-        <div class="text-sm text-gray-500 mb-2">示范单词：</div>
-        <div class="bg-gray-50 rounded-xl p-3 inline-block">
-          <span class="text-xl font-bold text-gray-800">${audioExample}</span>
-          <span class="text-gray-500 ml-2">${item.example ? item.example.zh : ''}</span>
-        </div>
-      </div>
-      <div class="flex gap-2 justify-center mb-3">
-        <button id="play-sound" class="btn-secondary px-4 py-3 rounded-xl font-bold flex items-center gap-2">
-          🔊 听发音
-        </button>
-        <button id="play-example" class="btn-secondary px-4 py-3 rounded-xl font-bold flex items-center gap-2">
-          🗣️ 听单词
-        </button>
-      </div>
-      <button id="record-btn" class="btn-primary text-white px-6 py-4 rounded-2xl font-bold text-lg w-full flex items-center justify-center gap-2">
-        🎤 跟我读
-      </button>
-      <div id="record-status" class="mt-3 text-sm min-h-[24px]"></div>
-    </div>
-  `;
-  $('play-sound').addEventListener('click', () => speak(item.es));
-  $('play-example').addEventListener('click', () => speak(audioExample));
-  $('record-btn').addEventListener('click', () => startPronRecording(item));
-  $('pron-progress').textContent = `${pronIdx + 1}/${pronUnit.items.length}`;
-}
-
-function startPronRecording(item) {
-  const status = $('record-status');
-  const target = item.example ? item.example.es : item.es;
-  status.innerHTML = '<div class="text-red-500 font-bold animate-pulse">● 录音中... 请读出单词</div>';
-  $('record-btn').disabled = true;
-  startRecording(target,
-    (recognized, targetText) => {
-      const result = comparePronunciation(targetText, recognized);
-      const targetNorm = targetText.toLowerCase().replace(/[¿¡!?.,]/g, '');
-      if (result.similarity >= 0.75) {
-        status.innerHTML = `
-          <div class="bg-green-50 border-2 border-green-300 rounded-xl p-3">
-            <div class="text-2xl mb-1">✓ 太棒了！</div>
-            <div class="text-sm text-gray-600">你读的是：<b>${result.best}</b></div>
-            <div class="text-sm text-green-600 font-bold">相似度 ${Math.round(result.similarity * 100)}%</div>
-          </div>
-        `;
-        playSound('correct');
-        pronScore++;
-        state.totalXp += 10;
-        state.todayXp += 10;
-        saveState(); updateTopBar();
-        setTimeout(() => { pronIdx++; renderPronItem(); }, 1800);
-      } else {
-        status.innerHTML = `
-          <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3">
-            <div class="text-xl mb-1">🤔 差一点，再试一次</div>
-            <div class="text-sm text-gray-600">你读的是：<b>${result.best || '(没听清)'}</b></div>
-            <div class="text-sm text-gray-600">正确：<b class="text-green-600">${targetNorm}</b></div>
-            <div class="text-sm text-yellow-700 mt-1">相似度 ${Math.round(result.similarity * 100)}%（需 75%）</div>
-            <button id="retry-record" class="btn-primary text-white font-bold py-2 px-4 rounded-xl mt-2 text-sm">🎤 再试</button>
-            <button id="skip-pron" class="btn-secondary font-bold py-2 px-4 rounded-xl mt-2 text-sm">跳过 →</button>
-          </div>
-        `;
-        playSound('wrong');
-        $('retry-record').addEventListener('click', () => startPronRecording(item));
-        $('skip-pron').addEventListener('click', () => { pronIdx++; renderPronItem(); });
-      }
-      $('record-btn').disabled = false;
-    },
-    (err) => {
-      let msg = '录音失败';
-      if (err === 'no-speech') msg = '没听到声音，再试一次';
-      else if (err === 'not-allowed') msg = '请允许麦克风权限';
-      else if (err === 'audio-capture') msg = '找不到麦克风';
-      else if (err === '浏览器不支持录音') msg = '你的浏览器不支持录音，请用 Safari/Chrome';
-      status.innerHTML = `<div class="text-red-500">⚠️ ${msg}</div><button id="retry-record2" class="btn-primary text-white font-bold py-2 px-4 rounded-xl mt-2 text-sm">🎤 再试</button>`;
-      $('retry-record2').addEventListener('click', () => startPronRecording(item));
-      $('record-btn').disabled = false;
-    }
-  );
-}
-
-function finishPronunciation() {
-  const total = pronUnit.items.length;
-  const acc = Math.round((pronScore / total) * 100);
-  $('pron-content').innerHTML = `
-    <div class="text-center bounce-in">
-      <div class="text-6xl mb-3">🎉</div>
-      <h2 class="text-2xl font-bold text-gray-800 mb-2">${acc >= 80 ? '¡Excelente!' : '¡Sigue practicando!'}</h2>
-      <p class="text-gray-600 mb-4">通过 ${pronScore}/${total} 个 (${acc}%)</p>
-      <div class="bg-yellow-50 rounded-2xl p-4 mb-4">
-        <div class="text-3xl font-bold text-yellow-600">+${pronScore * 10} XP</div>
-      </div>
-      <button id="back-from-pron-finish" class="btn-primary px-6 py-3 rounded-2xl font-bold text-white">返回首页</button>
-    </div>
-  `;
-  showConfetti();
-  $('back-from-pron-finish').addEventListener('click', () => showScreen('learn'));
-}
-
 function renderStories() {
   const list = $('stories-list');
   list.innerHTML = '';
@@ -918,6 +898,245 @@ let convScore = 0;
 function openConversation(c) {
   currentConv = c;
   convLineIdx = 0;
+  convScore = 0;
+  $('conv-title').textContent = c.title;
+  $('conv-progress').textContent = `${c.lines.filter(l => l.prompt).length} 轮对话`;
+  showScreen('conversation');
+  renderConvLine();
+}
+
+// ==================== 发音实验室 ====================
+let recognition = null;
+let isRecording = false;
+let prnLesson = null;
+let prnItemIdx = 0;
+let prnScore = 0;
+let prnRetries = 0;
+
+function initSpeechRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    showModal(`<h3 class="text-xl font-bold mb-2">不支持录音</h3><p class="text-gray-600">这个浏览器不支持语音识别。请用 Safari 或 Chrome 打开。</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">好的</button>`);
+    return false;
+  }
+  recognition = new SR();
+  recognition.lang = 'es-ES';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 3;
+  return true;
+}
+
+function normalizeSpanish(text) {
+  return text.toLowerCase()
+    .replace(/[¿¡!.,?]/g, '')
+    .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
+    .replace(/ü/g, 'u')
+    .trim();
+}
+
+function similarity(a, b) {
+  const aN = normalizeSpanish(a);
+  const bN = normalizeSpanish(b);
+  if (aN === bN) return 1.0;
+  const aWords = aN.split(/\s+/);
+  const bWords = bN.split(/\s+/);
+  let matches = 0;
+  for (const w of aWords) {
+    if (bWords.includes(w) || bWords.some(bw => bw.includes(w) || w.includes(bw))) matches++;
+  }
+  return matches / aWords.length;
+}
+
+function startRecording(targetText, onResult) {
+  if (!recognition && !initSpeechRecognition()) return;
+  isRecording = true;
+  recognition.onresult = (event) => {
+    isRecording = false;
+    let bestTranscript = '';
+    let bestConfidence = 0;
+    for (let i = 0; i < event.results.length; i++) {
+      for (let j = 0; j < event.results[i].length; j++) {
+        const r = event.results[i][j];
+        if (r.confidence > bestConfidence) {
+          bestConfidence = r.confidence;
+          bestTranscript = r.transcript;
+        }
+      }
+    }
+    onResult(bestTranscript, bestConfidence);
+  };
+  recognition.onerror = (event) => {
+    isRecording = false;
+    if (event.error === 'no-speech') {
+      onResult('', 0, '没有听到声音，再试一次');
+    } else if (event.error === 'not-allowed') {
+      onResult('', 0, '请允许使用麦克风');
+    } else {
+      onResult('', 0, '识别失败：' + event.error);
+    }
+  };
+  recognition.onend = () => { isRecording = false; };
+  try { recognition.start(); } catch (e) { isRecording = false; }
+}
+
+function stopRecording() {
+  if (recognition && isRecording) {
+    try { recognition.stop(); } catch (e) {}
+  }
+}
+
+function renderPronunciationList() {
+  const list = $('pronunciation-list');
+  list.innerHTML = '';
+  PRONUNCIATION_LESSONS.forEach(lesson => {
+    const div = document.createElement('div');
+    div.className = 'bg-white rounded-2xl p-4 shadow cursor-pointer hover:shadow-lg transition-shadow';
+    div.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="text-3xl">${lesson.emoji}</div>
+        <div class="flex-1">
+          <h3 class="font-bold text-gray-800">${lesson.title}</h3>
+          <p class="text-sm text-gray-500">${lesson.description} · ${lesson.items.length} 题</p>
+        </div>
+        <div class="text-right">
+          <div class="text-xs text-gray-500">${lesson.level}</div>
+          <div class="text-2xl">▶️</div>
+        </div>
+      </div>
+    `;
+    div.addEventListener('click', () => openPronunciationLesson(lesson));
+    list.appendChild(div);
+  });
+}
+
+function openPronunciationLesson(lesson) {
+  prnLesson = lesson;
+  prnItemIdx = 0;
+  prnScore = 0;
+  $('prn-title').textContent = lesson.title;
+  $('prn-progress').textContent = `${lesson.items.length} 题`;
+  showScreen('pronunciation-practice');
+  renderPronunciationItem();
+}
+
+function renderPronunciationItem() {
+  if (prnItemIdx >= prnLesson.items.length) {
+    finishPronunciationLesson();
+    return;
+  }
+  const item = prnLesson.items[prnItemIdx];
+  $('prn-content').innerHTML = `
+    <div class="text-center">
+      <div class="text-xs text-gray-400 mb-1">第 ${prnItemIdx + 1} / ${prnLesson.items.length} 题</div>
+      <div class="text-6xl font-bold text-gray-800 mb-2 my-8">${item.text}</div>
+      <div class="text-xl text-gray-600 mb-2">「${item.zh}」</div>
+      ${item.highlight ? `<div class="text-sm text-orange-500 mb-4">⚠️ 注意 <b>${item.highlight}</b> 的发音</div>` : '<div class="mb-4"></div>'}
+      <div class="bg-gray-50 rounded-2xl p-4 mb-4">
+        <div class="text-sm text-gray-500 mb-1">例句：</div>
+        <div class="text-lg text-gray-800 font-medium">${item.example}</div>
+        <div class="text-sm text-gray-500">${item.exampleZh}</div>
+      </div>
+      <div class="flex gap-2 justify-center mb-4">
+        <button id="prn-listen" class="btn-primary px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
+          🔊 听发音
+        </button>
+        <button id="prn-record" class="btn-danger px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
+          🎤 跟我读
+        </button>
+      </div>
+      <div id="prn-feedback" class="min-h-[60px]"></div>
+    </div>
+  `;
+  $('prn-listen').addEventListener('click', () => speak(item.text));
+  $('prn-record').addEventListener('click', () => handlePronunciationRecord(item));
+}
+
+function handlePronunciationRecord(item) {
+  if (isRecording) {
+    stopRecording();
+    return;
+  }
+  const fb = $('prn-feedback');
+  fb.innerHTML = `
+    <div class="flex items-center justify-center gap-2 text-red-500 font-bold text-lg">
+      <span class="recording-pulse">🔴</span>
+      <span>正在听... 请说 "${item.text}"</span>
+    </div>
+  `;
+  // 自动播放一遍提示音
+  speak(item.text);
+  // 1秒后开始录音（避免录到自己的播放声）
+  setTimeout(() => {
+    startRecording(item.text, (transcript, confidence, errorMsg) => {
+      if (errorMsg) {
+        fb.innerHTML = `
+          <div class="text-orange-600 font-bold mb-2">⚠️ ${errorMsg}</div>
+          <button id="prn-retry" class="btn-primary px-4 py-2 rounded-xl font-bold">再试一次</button>
+        `;
+        $('prn-retry').addEventListener('click', () => handlePronunciationRecord(item));
+        return;
+      }
+      const sim = similarity(transcript, item.text);
+      const passed = sim >= 0.7;
+      if (passed) {
+        prnScore++;
+        updateXp(8);
+        fb.innerHTML = `
+          <div class="bounce-in bg-green-50 rounded-2xl p-4">
+            <div class="text-4xl mb-1">🎉</div>
+            <div class="text-green-600 font-bold text-lg">¡Perfecto! ${Math.round(sim * 100)}% 准确</div>
+            <div class="text-sm text-gray-600 mt-1">你说：${transcript}</div>
+            <button id="prn-next" class="btn-primary px-6 py-2 rounded-xl font-bold mt-3">下一题 →</button>
+          </div>
+        `;
+        playSound('correct');
+        $('prn-next').addEventListener('click', () => { prnItemIdx++; renderPronunciationItem(); });
+      } else {
+        playSound('wrong');
+        fb.innerHTML = `
+          <div class="bg-orange-50 rounded-2xl p-4">
+            <div class="text-3xl mb-1">🤔</div>
+            <div class="text-orange-600 font-bold">${Math.round(sim * 100)}% 准确 · 再试一次</div>
+            <div class="text-sm text-gray-600 mt-1">你说：${transcript}</div>
+            <div class="text-sm text-gray-500 mt-1">目标：${item.text}</div>
+            <div class="flex gap-2 justify-center mt-3">
+              <button id="prn-listen-again" class="btn-primary px-4 py-2 rounded-xl font-bold">🔊 再听一遍</button>
+              <button id="prn-retry" class="btn-danger px-4 py-2 rounded-xl font-bold">🎤 重录</button>
+              <button id="prn-skip" class="btn-secondary px-4 py-2 rounded-xl font-bold text-sm">跳过</button>
+            </div>
+          </div>
+        `;
+        $('prn-listen-again').addEventListener('click', () => speak(item.text));
+        $('prn-retry').addEventListener('click', () => handlePronunciationRecord(item));
+        $('prn-skip').addEventListener('click', () => { prnItemIdx++; renderPronunciationItem(); });
+      }
+    });
+  }, 1500);
+}
+
+function finishPronunciationLesson() {
+  const total = prnLesson.items.length;
+  const acc = Math.round((prnScore / total) * 100);
+  $('prn-content').innerHTML = `
+    <div class="text-center bounce-in">
+      <div class="text-6xl mb-3">${acc >= 80 ? '🏆' : '💪'}</div>
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">${acc >= 80 ? '¡Excelente!' : '¡Sigue practicando!'}</h2>
+      <p class="text-gray-600 mb-2">通过 ${prnScore} / ${total} 题 (${acc}%)</p>
+      <div class="bg-yellow-50 rounded-2xl p-4 mb-4 max-w-xs mx-auto">
+        <div class="text-3xl font-bold text-yellow-600">+${prnScore * 8 + 20} XP</div>
+        <div class="text-sm text-gray-500">${acc >= 80 ? '完美通关！' : '继续努力哦'}</div>
+      </div>
+      <button id="prn-back-list" class="btn-primary px-6 py-3 rounded-2xl font-bold">返回课程列表</button>
+    </div>
+  `;
+  state.totalXp += prnScore * 8 + 20;
+  state.todayXp += prnScore * 8 + 20;
+  state.totalLessons++;
+  saveState(); updateTopBar(); updateDaily();
+  if (acc >= 80) { showConfetti(); playSound('complete'); }
+  $('prn-back-list').addEventListener('click', () => showScreen('pronunciation'));
+}
   convScore = 0;
   $('conv-title').textContent = c.title;
   $('conv-progress').textContent = `${c.lines.filter(l => l.prompt).length} 轮对话`;
@@ -1550,6 +1769,7 @@ $('back-from-conversations').addEventListener('click', () => showScreen('learn')
 $('back-from-story').addEventListener('click', () => showScreen('stories'));
 $('back-from-conversation').addEventListener('click', () => showScreen('conversations'));
 $('back-from-pronunciation').addEventListener('click', () => showScreen('learn'));
+$('back-from-pron-practice').addEventListener('click', () => { stopRecording(); showScreen('pronunciation'); });
 document.querySelectorAll('.nav-btn').forEach(b => {
   b.addEventListener('click', () => showScreen(b.dataset.screen));
 });
