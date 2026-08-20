@@ -103,8 +103,11 @@
 <main class="max-w-2xl mx-auto px-4 py-4">
   <section id="screen-learn">
     <div id="reminder-banner-container"></div>
-    <div class="gradient-card rounded-2xl p-4 text-white mb-4 shadow-lg">
-      <div class="flex items-center gap-4">
+
+    <!-- 英雄区：每日目标 + 问候 + 连击 -->
+    <div class="gradient-card rounded-2xl p-5 text-white mb-4 shadow-lg relative overflow-hidden">
+      <div class="absolute top-0 right-0 text-7xl opacity-10 leading-none">🦉</div>
+      <div class="relative flex items-center gap-4">
         <div class="relative w-20 h-20 flex-shrink-0">
           <svg class="progress-ring w-20 h-20" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none"/>
@@ -122,54 +125,89 @@
           </div>
         </div>
         <div class="flex-1">
-          <div class="text-sm opacity-90">每日目标</div>
-          <div class="text-lg font-bold"><span id="daily-current">0</span> / <span id="daily-goal">30</span></div>
+          <div class="text-sm opacity-90" id="home-greeting">¡Hola!</div>
+          <div class="text-xl font-bold"><span id="daily-current">0</span> / <span id="daily-goal">30</span></div>
           <div class="text-xs opacity-80 mt-1" id="daily-message">开始学习吧！</div>
         </div>
-        <div class="text-4xl">🎯</div>
+        <div class="text-right">
+          <div class="text-3xl streak-fire mb-1" id="home-streak-emoji">🔥</div>
+          <div class="text-xs opacity-80"><span id="home-streak-num">0</span> 天</div>
+        </div>
       </div>
     </div>
-    <div class="relative">
-      <div id="units-path" class="space-y-3"></div>
-    </div>
-    <div class="mt-6 gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300">
+
+    <!-- 继续学习卡 -->
+    <div id="continue-card" class="bg-white rounded-2xl p-4 shadow-md mb-4 border-2 border-gray-100">
       <div class="flex items-center gap-3">
-        <div class="text-3xl">🗣️</div>
-        <div class="flex-1">
-          <h3 class="font-bold text-gray-800 text-base">发音练习 <span class="bg-white text-green-600 text-xs px-2 py-0.5 rounded-full ml-1 font-bold">推荐</span></h3>
-          <p class="text-sm text-gray-600">从字母开始 · 跟读对比</p>
+        <div class="text-4xl" id="continue-emoji">🗣️</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs text-gray-500 font-bold">继续学习</div>
+          <div class="font-bold text-gray-800 truncate" id="continue-title">第 1 单元</div>
+          <div class="text-xs text-gray-500 truncate" id="continue-subtitle">发音入门 · 32 词</div>
         </div>
-        <button id="open-pronunciation" class="bg-white text-green-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-50">开始</button>
+        <button id="continue-btn" class="bg-gradient-to-br from-green-500 to-green-600 text-white px-5 py-3 rounded-2xl font-bold text-sm shadow-lg flex-shrink-0 active:scale-95 transition">
+          开始 →
+        </button>
       </div>
     </div>
-    <div class="mt-3 gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300">
-      <div class="flex items-center gap-3">
-        <div class="text-3xl">📚</div>
-        <div class="flex-1">
-          <h3 class="font-bold text-gray-800">复习旧词</h3>
-          <p class="text-sm text-gray-600">混合练习，巩固记忆</p>
-        </div>
-        <button id="start-practice" class="bg-white text-green-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-50">开始</button>
+
+    <!-- 数据小条：连击/词/单元/XP -->
+    <div class="grid grid-cols-4 gap-2 mb-4">
+      <div class="bg-white rounded-2xl p-2 text-center shadow-sm">
+        <div class="text-xl">🔥</div>
+        <div class="text-base font-bold text-gray-800" id="stat-streak">0</div>
+        <div class="text-xs text-gray-500">连胜</div>
+      </div>
+      <div class="bg-white rounded-2xl p-2 text-center shadow-sm">
+        <div class="text-xl">📖</div>
+        <div class="text-base font-bold text-gray-800" id="stat-words">0</div>
+        <div class="text-xs text-gray-500">学过词</div>
+      </div>
+      <div class="bg-white rounded-2xl p-2 text-center shadow-sm">
+        <div class="text-xl">🏆</div>
+        <div class="text-base font-bold text-gray-800" id="stat-units">0</div>
+        <div class="text-xs text-gray-500">通关</div>
+      </div>
+      <div class="bg-white rounded-2xl p-2 text-center shadow-sm">
+        <div class="text-xl">⭐</div>
+        <div class="text-base font-bold text-gray-800" id="stat-xp">0</div>
+        <div class="text-xs text-gray-500">总 XP</div>
       </div>
     </div>
-    <div class="mt-3 gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300">
-      <div class="flex items-center gap-3">
-        <div class="text-3xl">📖</div>
-        <div class="flex-1">
-          <h3 class="font-bold text-gray-800">西语小故事</h3>
-          <p class="text-sm text-gray-600">15 个故事 · 边读边学</p>
-        </div>
-        <button id="open-stories" class="bg-white text-green-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-50">阅读</button>
-      </div>
+
+    <!-- 4 宫格功能区 -->
+    <div class="grid grid-cols-2 gap-3 mb-6">
+      <button id="open-pronunciation" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition relative">
+        <span class="absolute top-2 right-2 bg-white text-green-600 text-xs px-2 py-0.5 rounded-full font-bold">推荐</span>
+        <div class="text-3xl mb-2">🗣️</div>
+        <div class="font-bold text-gray-800 text-sm">发音练习</div>
+        <div class="text-xs text-gray-600">从字母开始</div>
+      </button>
+      <button id="start-practice" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition">
+        <div class="text-3xl mb-2">📚</div>
+        <div class="font-bold text-gray-800 text-sm">复习旧词</div>
+        <div class="text-xs text-gray-600">巩固记忆</div>
+      </button>
+      <button id="open-stories" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition">
+        <div class="text-3xl mb-2">📖</div>
+        <div class="font-bold text-gray-800 text-sm">西语故事</div>
+        <div class="text-xs text-gray-600">15 个 · 边读边学</div>
+      </button>
+      <button id="open-conversations" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition">
+        <div class="text-3xl mb-2">💬</div>
+        <div class="font-bold text-gray-800 text-sm">情景对话</div>
+        <div class="text-xs text-gray-600">5 个场景</div>
+      </button>
     </div>
-    <div class="mt-3 gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300">
-      <div class="flex items-center gap-3">
-        <div class="text-3xl">💬</div>
-        <div class="flex-1">
-          <h3 class="font-bold text-gray-800">情景对话</h3>
-          <p class="text-sm text-gray-600">5 个场景 · 实战练口语</p>
-        </div>
-        <button id="open-conversations" class="bg-white text-green-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-50">开始</button>
+
+    <!-- 单元路径 -->
+    <div class="mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-base font-bold text-gray-700">📚 学习路径</h2>
+        <span class="text-xs text-gray-500" id="units-progress-label">0 / 25</span>
+      </div>
+      <div class="relative">
+        <div id="units-path" class="space-y-3"></div>
       </div>
     </div>
   </section>
@@ -756,6 +794,52 @@ function updateDaily() {
   // 鼓励语
   const msgs = ['开始学习吧！', '加油！', '不错，继续！', '火热的节奏！', '快要完成目标了！', '今天目标达成！🎉'];
   $('daily-message').textContent = msgs[Math.min(5, Math.floor(pct / 20))];
+}
+
+// 首页小数据条
+function updateHomeStats() {
+  $('stat-streak').textContent = state.streak;
+  $('stat-words').textContent = state.wordsLearned;
+  $('stat-units').textContent = state.completedUnits.length;
+  $('stat-xp').textContent = state.totalXp;
+  $('home-streak-num').textContent = state.streak;
+  const emoji = $('home-streak-emoji');
+  if (emoji) emoji.className = 'text-3xl mb-1 ' + (state.streak >= 30 ? 'streak-fire-huge' : (state.streak >= 7 ? 'streak-fire-big' : 'streak-fire'));
+  // 单元进度
+  const total = UNITS.length;
+  const done = UNITS.filter(u => isUnitCompleted(u.id)).length;
+  $('units-progress-label').textContent = `${done} / ${total}`;
+  // 问候语（按时间）
+  const hour = new Date().getHours();
+  let greet = '¡Hola!';
+  if (hour < 6) greet = '夜深了，注意休息 🌙';
+  else if (hour < 11) greet = '早上好 ☀️';
+  else if (hour < 14) greet = '中午好 🌞';
+  else if (hour < 18) greet = '下午好';
+  else if (hour < 22) greet = '晚上好 🌙';
+  $('home-greeting').textContent = greet;
+}
+
+// 继续学习卡：找到下一个已解锁但未通关的单元
+function updateContinueCard() {
+  const next = UNITS.find(u => isUnitUnlocked(u.id) && !isUnitCompleted(u.id));
+  const card = $('continue-card');
+  const btn = $('continue-btn');
+  if (!next) {
+    // 全部通关
+    $('continue-emoji').textContent = '🏆';
+    $('continue-title').textContent = '所有单元已通关！';
+    $('continue-subtitle').textContent = '可以挑战复习巩固';
+    btn.textContent = '去复习';
+    btn.onclick = () => startLesson({ id: -1, words: UNITS.flatMap(u => u.words || u.items), title: '综合复习', emoji: '📚', isPractice: true });
+    return;
+  }
+  $('continue-emoji').textContent = next.emoji;
+  $('continue-title').textContent = `第 ${next.id} 单元 · ${next.title}`;
+  const wc = (next.words || next.items).length;
+  $('continue-subtitle').textContent = `${wc} 词 · 约 ${Math.max(5, Math.ceil(wc / 4))} 分钟`;
+  btn.textContent = state.completedUnits.length > 0 ? '继续 →' : '开始 →';
+  btn.onclick = () => startLesson(next);
 }
 
 function showScreen(name) {
@@ -1429,6 +1513,8 @@ let unitsExpanded = false;
 const UNITS_WINDOW = 5; // 默认显示单元数（当前 + 前后各 2）
 
 function renderHome() {
+  updateHomeStats();
+  updateContinueCard();
   const list = $('units-path');
   list.innerHTML = '';
 
