@@ -68,7 +68,7 @@ const STORIES = [
       { es: "El niño dibuja una casa.", zh: "男孩画了一栋房子。" },
       { es: "La casa es roja y grande.", zh: "房子是红色的大房子。" },
       { es: "El cielo es azul y el sol es amarillo.", zh: "天空是蓝色，太阳是黄色。" },
-      { es: "Hay un gato verde en el jardín.", zh: "花园里有一只绿色的猫。" }
+      { es: "Hay un pájaro verde en el jardín.", zh: "花园里有一只绿色的小鸟。" }
     ],
     questions: [
       {
