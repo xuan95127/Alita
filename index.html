@@ -2030,7 +2030,15 @@ function similarity(a, b) {
 function startRecording(targetText, onResult) {
   if (!recognition && !initSpeechRecognition()) return;
   isRecording = true;
+  let resultReceived = false;
+  let timeoutId = setTimeout(() => {
+    if (isRecording && recognition) {
+      try { recognition.stop(); } catch (e) {}
+    }
+  }, 6000);
   recognition.onresult = (event) => {
+    resultReceived = true;
+    clearTimeout(timeoutId);
     isRecording = false;
     let bestTranscript = '';
     let bestConfidence = 0;
@@ -2046,6 +2054,8 @@ function startRecording(targetText, onResult) {
     onResult(bestTranscript, bestConfidence);
   };
   recognition.onerror = (event) => {
+    resultReceived = true;
+    clearTimeout(timeoutId);
     isRecording = false;
     if (event.error === 'no-speech') {
       onResult('', 0, '没有听到声音，再试一次');
@@ -2055,8 +2065,19 @@ function startRecording(targetText, onResult) {
       onResult('', 0, '识别失败：' + event.error);
     }
   };
-  recognition.onend = () => { isRecording = false; };
-  try { recognition.start(); } catch (e) { isRecording = false; }
+  recognition.onend = () => {
+    clearTimeout(timeoutId);
+    isRecording = false;
+    // iOS Safari 经常只触发 onend 而不触发 onresult/onerror，必须兜底
+    if (!resultReceived) {
+      onResult('', 0, '没听清，按"再试一次"或"跳过"');
+    }
+  };
+  try { recognition.start(); } catch (e) {
+    clearTimeout(timeoutId);
+    isRecording = false;
+    onResult('', 0, '启动失败，再试一次');
+  }
 }
 
 function stopRecording() {
