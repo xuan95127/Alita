@@ -237,11 +237,13 @@
         <div class="text-3xl mb-2">📖</div>
         <div class="font-bold text-gray-800 text-sm">西语故事</div>
         <div class="text-xs text-gray-600" id="home-stories-count">15 个 · 边读边学</div>
+        <div class="text-[10px] text-gray-700 mt-1 font-bold" id="home-stories-progress"></div>
       </button>
       <button id="open-conversations" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition">
         <div class="text-3xl mb-2">💬</div>
         <div class="font-bold text-gray-800 text-sm">情景对话</div>
         <div class="text-xs text-gray-600" id="home-convs-count">5 个场景</div>
+        <div class="text-[10px] text-gray-700 mt-1 font-bold" id="home-convs-progress"></div>
       </button>
     </div>
 
@@ -386,6 +388,11 @@
         <button class="buy-btn btn-secondary px-3 py-2 rounded-xl font-bold text-sm" data-item="streak_freeze" data-cost="100">💎 100</button>
       </div>
       <div class="bg-white rounded-2xl p-4 shadow flex items-center gap-3">
+        <div class="text-4xl">🚑</div>
+        <div class="flex-1"><h3 class="font-bold text-gray-800">修复断签</h3><p class="text-xs text-gray-500">已断了也能恢复（要 200💎）</p></div>
+        <button class="buy-btn btn-secondary px-3 py-2 rounded-xl font-bold text-sm" data-item="streak_repair" data-cost="200">💎 200</button>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow flex items-center gap-3">
         <div class="text-4xl">🎁</div>
         <div class="flex-1"><h3 class="font-bold text-gray-800">神秘宝箱</h3><p class="text-xs text-gray-500">随机获得 20-50 XP</p></div>
         <button class="buy-btn btn-secondary px-3 py-2 rounded-xl font-bold text-sm" data-item="mystery" data-cost="30">💎 30</button>
@@ -403,11 +410,12 @@
     <p class="text-sm text-gray-500 mb-4">查看你的学习成就</p>
     <div class="bg-white rounded-2xl p-5 shadow mb-4">
       <div class="flex items-center gap-4">
-        <div class="w-16 h-16 rounded-full gradient-card flex items-center justify-center text-3xl">🦉</div>
+        <div class="w-16 h-16 rounded-full gradient-card flex items-center justify-center text-3xl" id="profile-avatar-big">🦉</div>
         <div class="flex-1">
-          <div class="font-bold text-gray-800 text-lg">小西语学者</div>
+          <div class="font-bold text-gray-800 text-lg" id="profile-name-big">学习者</div>
           <div class="text-sm text-gray-500">等级 <span id="profile-level">1</span> · <span id="profile-xp">0</span> XP</div>
         </div>
+        <button onclick="openEditProfileWizard()" class="text-gray-500 text-sm px-2 py-1 rounded-lg hover:bg-gray-50">编辑</button>
       </div>
     </div>
     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -416,8 +424,84 @@
       <div class="bg-white rounded-2xl p-4 shadow text-center"><div class="text-3xl mb-1">📖</div><div class="text-2xl font-bold text-blue-500" id="profile-words">0</div><div class="text-xs text-gray-500">学过单词</div></div>
       <div class="bg-white rounded-2xl p-4 shadow text-center"><div class="text-3xl mb-1">✅</div><div class="text-2xl font-bold text-green-500" id="profile-lessons">0</div><div class="text-xs text-gray-500">完成关卡</div></div>
     </div>
+    <div class="grid grid-cols-3 gap-2 mb-4">
+      <div class="bg-white rounded-2xl p-3 shadow text-center"><div class="text-2xl mb-1">❄️</div><div class="text-base font-bold text-blue-500" id="profile-freezes">0</div><div class="text-xs text-gray-500">冰冻</div></div>
+      <div class="bg-white rounded-2xl p-3 shadow text-center"><div class="text-2xl mb-1">📖</div><div class="text-base font-bold text-purple-500" id="profile-stories">0</div><div class="text-xs text-gray-500">故事</div></div>
+      <div class="bg-white rounded-2xl p-3 shadow text-center"><div class="text-2xl mb-1">💬</div><div class="text-base font-bold text-pink-500" id="profile-convs">0</div><div class="text-xs text-gray-500">对话</div></div>
+    </div>
     <h3 class="font-bold text-gray-800 mb-2">🏆 成就</h3>
-    <div id="achievements-list" class="grid grid-cols-3 gap-3"></div>
+    <div id="achievements-list" class="grid grid-cols-3 gap-3 mb-4"></div>
+    <button onclick="showScreen('settings')" class="w-full bg-white rounded-2xl p-3 shadow text-left flex items-center gap-3 active:scale-95 transition">
+      <div class="text-2xl">⚙️</div>
+      <div class="flex-1 font-bold text-gray-800 text-sm">设置</div>
+      <div class="text-gray-400">→</div>
+    </button>
+  </section>
+
+  <!-- 设置屏幕 -->
+  <section id="screen-settings" class="hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button onclick="showScreen('profile')" class="text-2xl">←</button>
+      <h2 class="text-xl font-bold text-gray-800">⚙️ 设置</h2>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow mb-3 flex items-center gap-3">
+      <div class="text-2xl">🔊</div>
+      <div class="flex-1">
+        <div class="font-bold text-gray-800 text-sm">声音效果</div>
+        <div class="text-xs text-gray-500">答对/答错 提示音</div>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" id="setting-sound" class="sr-only peer" onchange="toggleSetting('soundOn', this.checked)">
+        <div class="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-green-500 transition"></div>
+        <div class="absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition peer-checked:translate-x-5"></div>
+      </label>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow mb-3 flex items-center gap-3">
+      <div class="text-2xl">📖</div>
+      <div class="flex-1">
+        <div class="font-bold text-gray-800 text-sm">错题本</div>
+        <div class="text-xs text-gray-500">当前 <span id="wrong-count">0</span> 道错题</div>
+      </div>
+      <button onclick="startReview()" class="text-green-600 font-bold text-sm">开始复习</button>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow mb-3 flex items-center gap-3">
+      <div class="text-2xl">🏠</div>
+      <div class="flex-1">
+        <div class="font-bold text-gray-800 text-sm">PWA 桌面版</div>
+        <div class="text-xs text-gray-500">Safari → 分享 → 添加到主屏幕</div>
+      </div>
+    </div>
+    <button onclick="if(confirm('清空所有学习数据？此操作无法撤销！')) { localStorage.clear(); location.reload(); }" class="w-full bg-red-50 text-red-500 rounded-2xl p-3 font-bold text-sm mt-4">
+      ⚠️ 清空所有数据
+    </button>
+  </section>
+
+  <!-- 单元详情/词汇表 -->
+  <section id="screen-unit-detail" class="hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button id="back-from-unit-detail" class="text-2xl">←</button>
+      <div class="flex-1">
+        <h2 class="text-xl font-bold text-gray-800" id="unit-detail-title">第 1 单元</h2>
+        <div class="text-xs text-gray-500" id="unit-detail-subtitle">发音入门</div>
+      </div>
+      <button id="unit-detail-start" class="bg-gradient-to-br from-green-500 to-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg">开始</button>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow">
+      <h3 class="font-bold text-gray-800 mb-3">📚 词汇表 <span class="text-xs text-gray-500" id="unit-detail-count"></span></h3>
+      <div id="unit-detail-vocab" class="grid grid-cols-2 gap-2"></div>
+    </div>
+  </section>
+
+  <!-- 错题复习 -->
+  <section id="screen-review" class="hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button id="back-from-review" class="text-2xl">←</button>
+      <div class="flex-1">
+        <h2 class="text-xl font-bold text-gray-800">📖 错题复习</h2>
+        <div class="text-xs text-gray-500" id="review-progress">0 / 0</div>
+      </div>
+    </div>
+    <div id="review-content" class="bg-white rounded-2xl p-6 shadow-lg min-h-[450px]"></div>
   </section>
 </main>
 
@@ -636,6 +720,14 @@ function defaultState() {
     nightLearner: false, earlyLearner: false,
     dailyQuests: { date: null, list: [] },
     earnedAchievements: [],
+    // 继续上次 + 错题本
+    lastUnitId: null, lastScreen: null,
+    wrongAnswers: [],  // {es, zh, type, date, unitId}
+    // 内容完成进度
+    completedStories: [], completedConversations: [],
+    listenedCount: 0,
+    // 设置
+    soundOn: true,
     // 本周 PK
     weeklyXp: 0, weeklyLessons: 0, weekStartDate: null
   };
@@ -1339,9 +1431,21 @@ function updateHomeStats() {
 
 // 继续学习卡：找到下一个已解锁但未通关的单元
 function updateContinueCard() {
-  const next = UNITS.find(u => isUnitUnlocked(u.id) && !isUnitCompleted(u.id));
-  const card = $('continue-card');
   const btn = $('continue-btn');
+  // 优先显示"继续上次"
+  if (state.lastUnitId) {
+    const last = UNITS.find(u => u.id === state.lastUnitId);
+    if (last && isUnitUnlocked(last.id) && !isUnitCompleted(last.id)) {
+      $('continue-emoji').textContent = last.emoji;
+      $('continue-title').textContent = `继续：第 ${last.id} 单元 · ${last.title}`;
+      const wc = (last.words || last.items).length;
+      $('continue-subtitle').textContent = `${wc} 词 · 上次学到一半`;
+      btn.textContent = '继续 →';
+      btn.onclick = () => startLesson(last);
+      return;
+    }
+  }
+  const next = UNITS.find(u => isUnitUnlocked(u.id) && !isUnitCompleted(u.id));
   if (!next) {
     // 全部通关
     $('continue-emoji').textContent = '🏆';
@@ -1355,12 +1459,38 @@ function updateContinueCard() {
   $('continue-title').textContent = `第 ${next.id} 单元 · ${next.title}`;
   const wc = (next.words || next.items).length;
   $('continue-subtitle').textContent = `${wc} 词 · 约 ${Math.max(5, Math.ceil(wc / 4))} 分钟`;
-  btn.textContent = state.completedUnits.length > 0 ? '继续 →' : '开始 →';
+  btn.textContent = state.completedUnits.length > 0 ? '开始 →' : '开始 →';
   btn.onclick = () => startLesson(next);
 }
 
+// 单元详情/词汇表
+function showUnitDetail(unit) {
+  $('unit-detail-title').textContent = `第 ${unit.id} 单元`;
+  $('unit-detail-subtitle').textContent = `${unit.title} · ${(unit.words || unit.items).length} 词`;
+  const words = unit.words || unit.items;
+  $('unit-detail-count').textContent = `(${words.length} 个)`;
+  const grid = $('unit-detail-vocab');
+  grid.innerHTML = '';
+  words.forEach(w => {
+    const card = document.createElement('div');
+    card.className = 'bg-gray-50 rounded-xl p-3 active:scale-95 transition cursor-pointer';
+    card.innerHTML = `
+      <div class="text-lg font-bold text-gray-800">${w.es}</div>
+      <div class="text-xs text-gray-500">${w.zh}</div>
+      <button class="text-xs text-blue-500 mt-1 vocab-listen">🔊 听</button>
+    `;
+    card.querySelector('.vocab-listen').addEventListener('click', (e) => {
+      e.stopPropagation();
+      speak(w.es);
+    });
+    grid.appendChild(card);
+  });
+  $('unit-detail-start').onclick = () => { closeModal(); showScreen('learn'); setTimeout(() => startLesson(unit), 100); };
+  showScreen('unit-detail');
+}
+
 function showScreen(name) {
-  ['learn', 'lesson', 'result', 'quests', 'shop', 'profile', 'stories', 'story', 'conversations', 'conversation', 'pronunciation', 'pronunciation-practice'].forEach(s => $(`screen-${s}`).classList.add('hidden'));
+  ['learn', 'lesson', 'result', 'quests', 'shop', 'profile', 'stories', 'story', 'conversations', 'conversation', 'pronunciation', 'pronunciation-practice', 'settings', 'unit-detail', 'review'].forEach(s => $(`screen-${s}`).classList.add('hidden'));
   $(`screen-${name}`).classList.remove('hidden');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (['learn', 'quests', 'shop', 'profile'].includes(name)) {
@@ -2075,7 +2205,25 @@ function renderHome() {
     `;
     list.appendChild(row);
     if (unlocked) {
-      row.querySelector('button').addEventListener('click', () => startLesson(unit));
+      const btn = row.querySelector('button');
+      // 长按或右键进入单元详情；单击开始
+      btn.addEventListener('click', (e) => {
+        // 如果用户点的是 info 图标（如果有），进入详情；否则直接开始
+        if (e.target.closest('.unit-info-btn')) {
+          showUnitDetail(unit);
+        } else {
+          startLesson(unit);
+        }
+      });
+      // 加一个小眼睛图标
+      const infoBtn = document.createElement('button');
+      infoBtn.className = 'unit-info-btn absolute text-lg opacity-60 hover:opacity-100';
+      infoBtn.textContent = '👀';
+      infoBtn.title = '查看词汇';
+      infoBtn.style.cssText = 'top:-4px;left:-4px;';
+      const circle = row.querySelector('.unit-circle');
+      circle.style.position = 'relative';
+      circle.appendChild(infoBtn);
     }
   });
 
