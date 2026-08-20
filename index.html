@@ -2043,7 +2043,7 @@ function startRecording(targetText, onResult) {
     if (event.error === 'no-speech') {
       onResult('', 0, '没有听到声音，再试一次');
     } else if (event.error === 'not-allowed') {
-      onResult('', 0, '请允许使用麦克风');
+      onResult('', 0, '麦克风被拒了 😅<br><span class="text-sm text-gray-500">设置 → Safari → 麦克风 → 允许</span>');
     } else {
       onResult('', 0, '识别失败：' + event.error);
     }
@@ -2109,7 +2109,7 @@ function renderPronunciationItem() {
         <div class="text-lg text-gray-800 font-medium">${item.example}</div>
         <div class="text-sm text-gray-500">${item.exampleZh}</div>
       </div>
-      <div class="flex gap-2 justify-center mb-4">
+      <div class="flex gap-2 justify-center mb-3">
         <button id="prn-listen" class="btn-primary px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
           🔊 听发音
         </button>
@@ -2117,11 +2117,17 @@ function renderPronunciationItem() {
           🎤 跟我读
         </button>
       </div>
+      <div class="text-center mb-4">
+        <button id="prn-skip-initial" class="text-sm text-gray-400 underline hover:text-gray-600 py-2 px-3">
+          不想练？下一题 →
+        </button>
+      </div>
       <div id="prn-feedback" class="min-h-[60px]"></div>
     </div>
   `;
   $('prn-listen').addEventListener('click', () => speak(item.text));
   $('prn-record').addEventListener('click', () => handlePronunciationRecord(item));
+  $('prn-skip-initial').addEventListener('click', () => { prnItemIdx++; renderPronunciationItem(); });
 }
 
 function handlePronunciationRecord(item) {
