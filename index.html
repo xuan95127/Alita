@@ -1465,8 +1465,28 @@ function updateContinueCard() {
 
 // 单元详情/词汇表
 function showUnitDetail(unit) {
-  $('unit-detail-title').textContent = `第 ${unit.id} 单元`;
+  const level = unit.level || getUnitLevel(unit.id);
+  $('unit-detail-title').innerHTML = `第 ${unit.id} 单元 <span class="text-xs ${LEVEL_COLORS[level]} text-white px-2 py-0.5 rounded align-middle ml-1">${level}</span>`;
   $('unit-detail-subtitle').textContent = `${unit.title} · ${(unit.words || unit.items).length} 词`;
+  // 故事情景卡
+  const story = unit.storyIntro ? `
+    <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 mb-3 border-2 border-purple-200">
+      <div class="flex items-start gap-3">
+        <div class="text-4xl bounce-in">${unit.emoji || '📖'}</div>
+        <div class="flex-1">
+          <div class="text-xs text-purple-600 font-bold mb-1">📖 今日故事</div>
+          <div class="text-sm text-gray-700 italic">"${unit.storyIntro}"</div>
+          ${unit.mascotMessage ? `<div class="text-xs text-orange-600 mt-2 font-bold">🦉 ${unit.mascotMessage}</div>` : ''}
+        </div>
+      </div>
+    </div>` : '';
+  // tip
+  const tipBlock = unit.tip ? `
+    <div class="bg-blue-50 rounded-2xl p-3 mb-3 border-l-4 border-blue-400">
+      <div class="text-xs text-blue-700 font-bold">💡 小贴士</div>
+      <div class="text-sm text-gray-700">${unit.tip}</div>
+    </div>` : '';
+  // 词汇表
   const words = unit.words || unit.items;
   $('unit-detail-count').textContent = `(${words.length} 个)`;
   const grid = $('unit-detail-vocab');
@@ -1485,6 +1505,15 @@ function showUnitDetail(unit) {
     });
     grid.appendChild(card);
   });
+  // 插入 story + tip 到 vocab 卡片前面
+  const vocabSection = grid.closest('.bg-white');
+  let existing = vocabSection.querySelector('.unit-story-tip');
+  if (!existing) {
+    existing = document.createElement('div');
+    existing.className = 'unit-story-tip';
+    vocabSection.insertBefore(existing, grid.parentElement);
+  }
+  existing.innerHTML = story + tipBlock;
   $('unit-detail-start').onclick = () => { closeModal(); showScreen('learn'); setTimeout(() => startLesson(unit), 100); };
   showScreen('unit-detail');
 }
@@ -2163,6 +2192,16 @@ function finishConversation() {
 let unitsExpanded = false;
 const UNITS_WINDOW = 5; // 默认显示单元数（当前 + 前后各 2）
 
+// 根据单元 id 返回 CEFR 级别
+function getUnitLevel(id) {
+  if (id <= 12) return 'A1';
+  if (id <= 20) return 'A2';
+  if (id <= 30) return 'B1';
+  return 'B2';
+}
+const LEVEL_COLORS = { A1: 'bg-green-500', A2: 'bg-blue-500', B1: 'bg-purple-500', B2: 'bg-orange-500' };
+const LEVEL_EMOJI = { A1: '🌱', A2: '🌿', B1: '🌳', B2: '🌟' };
+
 function renderHome() {
   updateHomeStats();
   updateContinueCard();
@@ -2173,16 +2212,14 @@ function renderHome() {
   // 找到当前应该学到的位置：最后一个已完成的下一个
   const completedIds = UNITS.filter(u => isUnitCompleted(u.id)).map(u => u.id);
   const lastCompleted = completedIds.length > 0 ? Math.max(...completedIds) : 0;
-  const currentIdx = Math.min(UNITS.length - 1, lastCompleted); // 0-based 索引，指向当前活跃单元
+  const currentIdx = Math.min(UNITS.length - 1, lastCompleted);
 
-  // 决定要显示的单元
   let shownUnits;
   if (unitsExpanded) {
     shownUnits = UNITS;
   } else {
-    // 显示 currentIdx 前后各 2 个
     const start = Math.max(0, currentIdx - 2);
-    const end = Math.min(UNITS.length, currentIdx + 3); // +3 是 exclusive
+    const end = Math.min(UNITS.length, currentIdx + 3);
     shownUnits = UNITS.slice(start, end);
   }
 
@@ -2191,12 +2228,14 @@ function renderHome() {
     const unlocked = isUnitUnlocked(unit.id);
     const completed = isUnitCompleted(unit.id);
     const crowns = state.unitCrowns[unit.id] || 0;
+    const level = unit.level || getUnitLevel(unit.id);
     const row = document.createElement('div');
     row.className = `flex items-center gap-3 ${actualIdx % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`;
     row.innerHTML = `
       <div class="flex-1 ${actualIdx % 2 === 0 ? 'text-right pr-2' : 'text-left pl-2'}">
         <div class="font-bold text-gray-800">第 ${actualIdx + 1} 单元</div>
         <div class="text-sm text-gray-500">${unit.title} · ${(unit.words || unit.items).length} 词</div>
+        <div class="mt-0.5"><span class="text-[10px] ${LEVEL_COLORS[level]} text-white px-1.5 py-0.5 rounded font-bold">${level}</span></div>
       </div>
       <button class="unit-circle w-20 h-20 rounded-full bg-gradient-to-br ${unit.color} flex items-center justify-center text-4xl shadow-lg flex-shrink-0 ${!unlocked ? 'unit-locked' : ''}" data-unit="${unit.id}">
         ${!unlocked ? '🔒' : completed ? '⭐' : unit.emoji}
@@ -2206,9 +2245,7 @@ function renderHome() {
     list.appendChild(row);
     if (unlocked) {
       const btn = row.querySelector('button');
-      // 长按或右键进入单元详情；单击开始
       btn.addEventListener('click', (e) => {
-        // 如果用户点的是 info 图标（如果有），进入详情；否则直接开始
         if (e.target.closest('.unit-info-btn')) {
           showUnitDetail(unit);
         } else {
@@ -2237,7 +2274,7 @@ function renderHome() {
       btn.innerHTML = `<span>收起</span><span class="text-base">↑</span>`;
       btn.onclick = () => { unitsExpanded = false; renderHome(); };
     } else {
-      btn.innerHTML = `<span>📚 查看全部 25 单元</span><span class="text-xs text-gray-400">（已完成 ${completedCount}/${UNITS.length}）</span><span class="text-base">↓</span>`;
+      btn.innerHTML = `<span>📚 查看全部 ${UNITS.length} 单元</span><span class="text-xs text-gray-400">（已完成 ${completedCount}/${UNITS.length}）</span><span class="text-base">↓</span>`;
       btn.onclick = () => { unitsExpanded = true; renderHome(); };
     }
     list.appendChild(btn);
