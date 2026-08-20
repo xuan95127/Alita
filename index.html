@@ -88,15 +88,26 @@
 
 <header class="bg-white border-b-2 border-gray-200 sticky top-0 z-40">
   <div class="max-w-2xl mx-auto px-4 py-2 flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <span class="text-2xl owl-bounce">🦉</span>
-    </div>
+    <button id="profile-btn" onclick="toggleProfileMenu()" class="flex items-center gap-2 active:scale-95 transition px-1 py-1 rounded-xl hover:bg-gray-50">
+      <span id="profile-avatar-top" class="text-2xl">🦊</span>
+      <span id="profile-name-top" class="text-sm font-bold text-gray-700">学习者</span>
+      <span class="text-xs text-gray-400">▾</span>
+    </button>
     <div class="flex items-center gap-3 text-sm font-bold">
       <div class="flex items-center gap-1 text-orange-500" title="连胜"><span class="streak-fire">🔥</span><span id="streak">0</span></div>
       <div class="flex items-center gap-1 text-blue-500" title="宝石"><span>💎</span><span id="gems">0</span></div>
       <div class="flex items-center gap-1 text-yellow-600" title="经验"><span>⭐</span><span id="xp">0</span></div>
       <div class="flex items-center gap-1 text-red-500" title="红心"><span>❤️</span><span id="hearts">5</span></div>
     </div>
+  </div>
+  <!-- Profile 下拉菜单 -->
+  <div id="profile-menu" class="hidden absolute left-2 right-2 sm:left-4 sm:right-auto sm:w-72 mt-1 bg-white rounded-2xl shadow-2xl p-2 z-50 border-2 border-gray-100">
+    <div class="text-xs text-gray-400 px-3 py-2 font-bold">切换学习者</div>
+    <div id="profile-menu-list"></div>
+    <div class="border-t border-gray-100 my-1"></div>
+    <button onclick="openAddProfileWizard()" class="w-full text-left px-3 py-2 rounded-xl hover:bg-green-50 text-sm font-bold text-green-600">+ 添加新学习者</button>
+    <button onclick="openEditProfileWizard()" class="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 text-sm text-gray-700">✏️ 修改昵称/头像</button>
+    <button id="profile-delete-btn" onclick="deleteCurrentProfile()" class="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-500">🗑️ 删除当前学习者</button>
   </div>
 </header>
 
@@ -137,6 +148,16 @@
     </div>
 
     <!-- 继续学习卡 -->
+    <!-- 周末 PK 挑战卡（只有 ≥2 个 profile 才显示） -->
+    <div id="pk-card" class="hidden bg-white rounded-2xl p-4 shadow-md mb-4 border-2 border-orange-200">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-bold text-gray-800 text-sm">👑 本周 PK 挑战</h3>
+        <span class="text-xs text-gray-500">每周一重置</span>
+      </div>
+      <div class="grid grid-cols-2 gap-3" id="pk-grid"></div>
+      <div class="text-center mt-3 text-sm font-bold" id="pk-leader"></div>
+    </div>
+
     <div id="continue-card" class="bg-white rounded-2xl p-4 shadow-md mb-4 border-2 border-gray-100">
       <div class="flex items-center gap-3">
         <div class="text-4xl" id="continue-emoji">🗣️</div>
@@ -403,6 +424,23 @@
   </div>
 </div>
 
+<!-- Profile 创建/编辑 向导（全屏） -->
+<div id="profile-wizard" class="hidden fixed inset-0 bg-gradient-to-br from-green-400 via-green-500 to-emerald-600 z-[60] flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl bounce-in">
+    <div class="text-center mb-4">
+      <div class="text-5xl mb-2" id="wizard-emoji">🦉</div>
+      <h2 class="text-2xl font-bold text-gray-800" id="wizard-title">欢迎！</h2>
+      <p class="text-sm text-gray-500 mt-1" id="wizard-subtitle">创建你的学习档案</p>
+    </div>
+    <label class="block text-sm font-bold text-gray-700 mb-1">昵称</label>
+    <input id="wizard-name" type="text" maxlength="10" placeholder="例如：妹妹" class="w-full px-3 py-2 border-2 border-gray-200 rounded-xl mb-4 focus:border-green-500 outline-none text-base">
+    <label class="block text-sm font-bold text-gray-700 mb-2">选个头像</label>
+    <div id="wizard-avatars" class="grid grid-cols-5 gap-2 mb-5"></div>
+    <button id="wizard-confirm" class="w-full bg-gradient-to-br from-green-500 to-emerald-600 text-white py-3 rounded-2xl font-bold text-base shadow-lg active:scale-95 transition">开始学习 →</button>
+    <button id="wizard-skip" class="w-full text-gray-500 py-2 text-sm mt-1" onclick="closeProfileWizard()">稍后再说</button>
+  </div>
+</div>
+
 <script src="./content.js"></script>
 <script src="./stories.js"></script>
 <script>
@@ -552,33 +590,218 @@ const ACHIEVEMENTS = [
   { id: 'early_bird', emoji: '🐦', name: '早起鸟', desc: '早上 7 点前学习', check: s => s.earlyLearner }
 ];
 
-// ==================== 状态 ====================
-const STORAGE_KEY = 'mini-espanol-v2';
+// ==================== 多 Profile 状态系统 ====================
+const STORAGE_KEY_FAMILY = 'mini-espanol-family-v1';
+const STORAGE_KEY_PROFILE = (id) => 'mini-espanol-profile:' + id;
+const STORAGE_KEY_LEGACY = 'mini-espanol-v2';
+const AVATAR_SET = ['🦊', '🐼', '🐯', '🦁', '🐰', '🐶', '🐱', '🐨', '🐲', '🦄'];
 
-let state = {
-  totalXp: 0, todayXp: 0, lastDailyDate: null,
-  streak: 0, lastStreakDate: null,
-  hearts: 5, gems: 50, streakFreezes: 0, doubleXp: 0,
-  completedUnits: [], unitCrowns: {},
-  wordsLearned: 0, perfectLessons: 0, totalLessons: 0,
-  totalTime: 0, lastActiveDate: null,
-  nightLearner: false, earlyLearner: false,
-  dailyQuests: { date: null, list: [] }
-};
+let family = { profiles: [], activeProfileId: null };
+let state = defaultState();
+let wizardMode = null; // 'first' | 'add' | 'edit'
+
+function defaultState() {
+  return {
+    profileId: null,
+    totalXp: 0, todayXp: 0, lastDailyDate: null,
+    streak: 0, lastStreakDate: null,
+    hearts: 5, gems: 50, streakFreezes: 0, doubleXp: 0,
+    completedUnits: [], unitCrowns: {},
+    wordsLearned: 0, perfectLessons: 0, totalLessons: 0,
+    totalTime: 0, lastActiveDate: null,
+    nightLearner: false, earlyLearner: false,
+    dailyQuests: { date: null, list: [] },
+    // 本周 PK
+    weeklyXp: 0, weeklyLessons: 0, weekStartDate: null
+  };
+}
 
 let currentLesson = null, lessonQuestions = [], currentQuestionIdx = 0;
 let correctCount = 0, lessonStartTime = 0, currentUnitWords = [];
 
-function loadState() {
+function loadFamily() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(STORAGE_KEY_FAMILY);
+    if (saved) family = JSON.parse(saved);
+  } catch (e) {}
+}
+
+function saveFamily() {
+  try { localStorage.setItem(STORAGE_KEY_FAMILY, JSON.stringify(family)); } catch (e) {}
+}
+
+function loadProfile(id) {
+  state = defaultState();
+  if (!id) return;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_PROFILE(id));
     if (saved) state = { ...state, ...JSON.parse(saved) };
   } catch (e) {}
+  state.profileId = id;
+}
+
+function saveCurrentProfile() {
+  if (!family.activeProfileId) return;
+  try {
+    localStorage.setItem(STORAGE_KEY_PROFILE(family.activeProfileId), JSON.stringify(state));
+  } catch (e) {}
+}
+
+function loadState() {
+  loadFamily();
+  if (family.profiles.length === 0) {
+    // 检测是否有旧数据需要迁移
+    let legacyExists = false;
+    try { legacyExists = !!localStorage.getItem(STORAGE_KEY_LEGACY); } catch (e) {}
+    if (legacyExists) {
+      migrateFromLegacy();
+    } else {
+      // 全新用户：等 wizard 流程结束后再 loadProfile
+      return;
+    }
+  }
+  if (family.activeProfileId) {
+    loadProfile(family.activeProfileId);
+  }
   checkDaily(); checkStreak();
+  checkWeekly();
 }
 
 function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  saveCurrentProfile();
+}
+
+function migrateFromLegacy() {
+  let legacyState = null;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_LEGACY);
+    if (saved) legacyState = JSON.parse(saved);
+  } catch (e) {}
+  const profileId = 'p_' + Date.now().toString(36);
+  const profile = {
+    id: profileId,
+    name: '妹妹',
+    avatar: '🦊',
+    createdAt: Date.now(),
+    migrated: true
+  };
+  family = { profiles: [profile], activeProfileId: profileId };
+  saveFamily();
+  if (legacyState) {
+    state = { ...defaultState(), ...legacyState, profileId };
+    saveCurrentProfile();
+  } else {
+    state = defaultState();
+    state.profileId = profileId;
+  }
+}
+
+function createProfile(name, avatar) {
+  const id = 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  const profile = { id, name: (name || '学习者').trim().slice(0, 10) || '学习者', avatar: avatar || '🦊', createdAt: Date.now() };
+  family.profiles.push(profile);
+  family.activeProfileId = id;
+  saveFamily();
+  return id;
+}
+
+function switchProfile(id) {
+  if (id === family.activeProfileId) return;
+  saveCurrentProfile();
+  family.activeProfileId = id;
+  saveFamily();
+  loadProfile(id);
+  checkDaily(); checkStreak(); checkWeekly();
+  refreshAfterSwitch();
+  closeProfileMenu();
+}
+
+function refreshAfterSwitch() {
+  updateTopBar();
+  updateDaily();
+  updateHomeStats();
+  updateContinueCard();
+  updatePKCard();
+  renderHome();
+  showReminder();
+  closeModal();
+  // 如果当前在子页面，回到首页
+  const visible = document.querySelector('section[id^="screen-"]:not(.hidden)');
+  if (visible && visible.id !== 'screen-learn') showScreen('learn');
+}
+
+function deleteCurrentProfile() {
+  if (family.profiles.length <= 1) {
+    alert('至少要保留一个学习者哦');
+    return;
+  }
+  const id = family.activeProfileId;
+  const profile = family.profiles.find(p => p.id === id);
+  if (!profile) return;
+  if (!confirm(`确定要删除「${profile.name}」的所有进度吗？此操作无法撤销。`)) return;
+  try { localStorage.removeItem(STORAGE_KEY_PROFILE(id)); } catch (e) {}
+  family.profiles = family.profiles.filter(p => p.id !== id);
+  family.activeProfileId = family.profiles[0].id;
+  saveFamily();
+  loadProfile(family.activeProfileId);
+  checkDaily(); checkStreak(); checkWeekly();
+  refreshAfterSwitch();
+}
+
+function updateCurrentProfileName(newName) {
+  const p = family.profiles.find(p => p.id === family.activeProfileId);
+  if (p && newName.trim()) {
+    p.name = newName.trim().slice(0, 10);
+    saveFamily();
+  }
+}
+
+function updateCurrentProfileAvatar(newAvatar) {
+  const p = family.profiles.find(p => p.id === family.activeProfileId);
+  if (p) {
+    p.avatar = newAvatar;
+    saveFamily();
+  }
+}
+
+function getActiveProfile() {
+  return family.profiles.find(p => p.id === family.activeProfileId) || { name: '?', avatar: '🦉' };
+}
+
+// 获取某 profile 的快照（用于 PK 卡对比）
+function getProfileSnapshot(id) {
+  const profile = family.profiles.find(p => p.id === id);
+  if (!profile) return null;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_PROFILE(id));
+    if (!saved) return { ...profile, totalXp: 0, streak: 0, completedUnits: 0, weeklyXp: 0 };
+    const s = JSON.parse(saved);
+    return {
+      ...profile,
+      totalXp: s.totalXp || 0,
+      streak: s.streak || 0,
+      completedUnits: (s.completedUnits || []).length,
+      weeklyXp: s.weeklyXp || 0
+    };
+  } catch (e) {
+    return { ...profile, totalXp: 0, streak: 0, completedUnits: 0, weeklyXp: 0 };
+  }
+}
+
+// 本周 PK 数据：每周一重置
+function checkWeekly() {
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setHours(0, 0, 0, 0);
+  const day = monday.getDay() || 7;
+  monday.setDate(monday.getDate() - day + 1); // 本周一
+  const mondayStr = monday.toDateString();
+  if (state.weekStartDate !== mondayStr) {
+    state.weeklyXp = 0;
+    state.weeklyLessons = 0;
+    state.weekStartDate = mondayStr;
+    saveCurrentProfile();
+  }
 }
 
 function checkDaily() {
@@ -824,6 +1047,197 @@ function showReminder() {
 
 function showModal(html) { $('modal-content').innerHTML = html; $('modal').classList.remove('hidden'); }
 function closeModal() { $('modal').classList.add('hidden'); }
+
+// ==================== 多 Profile UI ====================
+let wizardSelectedAvatar = '🦊';
+
+function updateProfileButton() {
+  const p = getActiveProfile();
+  $('profile-avatar-top').textContent = p.avatar;
+  $('profile-name-top').textContent = p.name;
+  // 删除按钮只在 ≥2 个 profile 时可用
+  $('profile-delete-btn').classList.toggle('hidden', family.profiles.length <= 1);
+}
+
+function renderProfileMenu() {
+  const list = $('profile-menu-list');
+  list.innerHTML = '';
+  family.profiles.forEach(p => {
+    const isActive = p.id === family.activeProfileId;
+    const div = document.createElement('div');
+    div.className = `flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer ${isActive ? 'bg-green-50' : 'hover:bg-gray-50'}`;
+    div.innerHTML = `
+      <div class="text-2xl">${p.avatar}</div>
+      <div class="flex-1 font-bold text-sm text-gray-800">${p.name}</div>
+      ${isActive ? '<div class="text-green-500 text-lg">✓</div>' : ''}
+    `;
+    div.onclick = () => switchProfile(p.id);
+    list.appendChild(div);
+  });
+}
+
+function toggleProfileMenu() {
+  const menu = $('profile-menu');
+  if (menu.classList.contains('hidden')) {
+    renderProfileMenu();
+    menu.classList.remove('hidden');
+  } else {
+    menu.classList.add('hidden');
+  }
+}
+
+function closeProfileMenu() {
+  $('profile-menu').classList.add('hidden');
+}
+
+// 点击其他区域关闭菜单
+document.addEventListener('click', (e) => {
+  const menu = $('profile-menu');
+  const btn = $('profile-btn');
+  if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !btn.contains(e.target)) {
+    menu.classList.add('hidden');
+  }
+});
+
+function openAddProfileWizard() {
+  wizardMode = family.profiles.length === 0 ? 'first' : 'add';
+  openProfileWizard();
+  closeProfileMenu();
+}
+
+function openEditProfileWizard() {
+  const p = getActiveProfile();
+  wizardMode = 'edit';
+  openProfileWizard(p);
+  closeProfileMenu();
+}
+
+function openProfileWizard(prefill) {
+  const cur = prefill || getActiveProfile();
+  $('wizard-emoji').textContent = cur.avatar;
+  $('wizard-name').value = (prefill && prefill.name) || (wizardMode === 'first' ? '' : cur.name);
+  wizardSelectedAvatar = cur.avatar;
+  // 渲染头像选择器
+  const grid = $('wizard-avatars');
+  grid.innerHTML = '';
+  AVATAR_SET.forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = `text-3xl p-2 rounded-xl transition ${a === wizardSelectedAvatar ? 'bg-green-100 ring-2 ring-green-500 scale-110' : 'bg-gray-50 hover:bg-gray-100'}`;
+    btn.textContent = a;
+    btn.onclick = () => {
+      wizardSelectedAvatar = a;
+      $('wizard-emoji').textContent = a;
+      openProfileWizard(prefill); // 简单粗暴重渲染
+    };
+    grid.appendChild(btn);
+  });
+  // 标题
+  if (wizardMode === 'first') {
+    $('wizard-title').textContent = '¡Bienvenido!';
+    $('wizard-subtitle').textContent = '创建你的学习档案';
+    $('wizard-confirm').textContent = '开始学习 →';
+    $('wizard-skip').classList.add('hidden');
+  } else if (wizardMode === 'add') {
+    $('wizard-title').textContent = '添加新学习者';
+    $('wizard-subtitle').textContent = '家里还有谁想学？';
+    $('wizard-confirm').textContent = '创建 →';
+    $('wizard-skip').classList.remove('hidden');
+  } else {
+    $('wizard-title').textContent = '修改昵称/头像';
+    $('wizard-subtitle').textContent = '让档案更个性';
+    $('wizard-confirm').textContent = '保存';
+    $('wizard-skip').textContent = '取消';
+    $('wizard-skip').classList.remove('hidden');
+  }
+  $('profile-wizard').classList.remove('hidden');
+  setTimeout(() => $('wizard-name').focus(), 100);
+}
+
+function closeProfileWizard() {
+  $('profile-wizard').classList.add('hidden');
+}
+
+function onWizardConfirm() {
+  const name = $('wizard-name').value.trim() || '学习者';
+  if (wizardMode === 'first' || wizardMode === 'add') {
+    // 先保存当前活跃 profile 的 state
+    saveCurrentProfile();
+    const newId = createProfile(name, wizardSelectedAvatar);
+    // 新 profile 加载（state 已是 defaultState）
+    loadProfile(newId);
+    checkDaily(); checkStreak(); checkWeekly();
+    refreshAfterSwitch();
+    closeProfileWizard();
+    if (wizardMode === 'first') {
+      // 首次创建后，提示"再添加一个" or 直接开始
+      setTimeout(() => {
+        showModal(`
+          <div class="text-center">
+            <div class="text-5xl mb-2">🎉</div>
+            <h3 class="text-xl font-bold mb-2">「${name}」创建成功！</h3>
+            <p class="text-sm text-gray-600 mb-4">家里还有其他人想学吗？可以再添加一个</p>
+            <div class="flex gap-2">
+              <button onclick="closeModal(); openAddProfileWizard()" class="flex-1 bg-white border-2 border-green-500 text-green-600 py-2 rounded-xl font-bold text-sm">+ 再添加一个</button>
+              <button onclick="closeModal()" class="flex-1 btn-primary py-2 rounded-xl font-bold text-sm text-white">开始学习 →</button>
+            </div>
+          </div>
+        `);
+      }, 200);
+    }
+  } else if (wizardMode === 'edit') {
+    updateCurrentProfileName(name);
+    updateCurrentProfileAvatar(wizardSelectedAvatar);
+    updateProfileButton();
+    closeProfileWizard();
+  }
+}
+
+// 绑定确认按钮
+$('wizard-confirm').addEventListener('click', onWizardConfirm);
+// Enter 键提交
+$('wizard-name').addEventListener('keypress', (e) => { if (e.key === 'Enter') onWizardConfirm(); });
+
+// ==================== 周末 PK 挑战 ====================
+function updatePKCard() {
+  const card = $('pk-card');
+  if (!card) return;
+  if (family.profiles.length < 2) {
+    card.classList.add('hidden');
+    return;
+  }
+  card.classList.remove('hidden');
+  const grid = $('pk-grid');
+  const snapshots = family.profiles.map(p => getProfileSnapshot(p.id));
+  // 排序：本周 XP 多的排前面
+  snapshots.sort((a, b) => b.weeklyXp - a.weeklyXp);
+  grid.innerHTML = '';
+  snapshots.forEach((s, idx) => {
+    const isLeader = idx === 0 && s.weeklyXp > 0;
+    const isTie = snapshots[0].weeklyXp === snapshots[1].weeklyXp;
+    const cell = document.createElement('div');
+    cell.className = `text-center p-3 rounded-xl ${isLeader ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-orange-300' : 'bg-gray-50'}`;
+    cell.innerHTML = `
+      <div class="text-3xl">${s.avatar}</div>
+      <div class="font-bold text-sm text-gray-800 mt-1">${s.name}</div>
+      <div class="text-2xl font-bold mt-1 ${isLeader ? 'text-orange-500' : 'text-gray-600'}">${s.weeklyXp}</div>
+      <div class="text-xs text-gray-500">本周 XP</div>
+    `;
+    grid.appendChild(cell);
+  });
+  // 领奖文案
+  const leader = $('pk-leader');
+  if (snapshots[0].weeklyXp === 0 && snapshots[1].weeklyXp === 0) {
+    leader.textContent = '本周还没开始，加油！💪';
+    leader.className = 'text-center mt-3 text-sm font-bold text-gray-500';
+  } else if (snapshots[0].weeklyXp === snapshots[1].weeklyXp) {
+    leader.textContent = '🤝 并列第一！';
+    leader.className = 'text-center mt-3 text-sm font-bold text-blue-500';
+  } else {
+    const diff = snapshots[0].weeklyXp - snapshots[1].weeklyXp;
+    leader.textContent = `👑 ${snapshots[0].name} 领先 ${diff} XP`;
+    leader.className = 'text-center mt-3 text-sm font-bold text-orange-500';
+  }
+}
 $('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
 
 function updateTopBar() {
@@ -1570,6 +1984,7 @@ const UNITS_WINDOW = 5; // 默认显示单元数（当前 + 前后各 2）
 function renderHome() {
   updateHomeStats();
   updateContinueCard();
+  updatePKCard();
   const list = $('units-path');
   list.innerHTML = '';
 
@@ -2100,7 +2515,7 @@ function finishLesson(endedEarly = false) {
   if (hour >= 22 || hour < 5) state.nightLearner = true;
   if (hour < 7) state.earlyLearner = true;
   state.lastActiveDate = today;
-  state.totalXp += xpEarned; state.todayXp += xpEarned;
+  state.totalXp += xpEarned; state.todayXp += xpEarned; state.weeklyXp += xpEarned; state.weeklyLessons += 1;
   if (state.doubleXp > 0) state.doubleXp = Math.max(0, state.doubleXp - 1);
   if (accuracy === 100) state.gems += 5;
   saveState();
@@ -2165,8 +2580,14 @@ document.querySelectorAll('.nav-btn').forEach(b => {
 });
 
 loadState();
-showScreen('learn');
-showReminder();
+if (family.profiles.length === 0) {
+  // 全新用户：弹出创建向导
+  openAddProfileWizard();
+} else {
+  updateProfileButton();
+  showScreen('learn');
+  showReminder();
+}
 </script>
 </body>
 </html>
