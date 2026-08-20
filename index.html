@@ -120,6 +120,16 @@
         <button id="open-conversations" class="btn-secondary px-4 py-2 rounded-xl font-bold text-sm">开始</button>
       </div>
     </div>
+    <div class="mt-3 bg-gradient-to-r from-pink-50 to-rose-50 rounded-2xl p-4 border-2 border-pink-200">
+      <div class="flex items-center gap-3">
+        <div class="text-3xl">🔤</div>
+        <div class="flex-1">
+          <h3 class="font-bold text-gray-800">发音练习 <span class="text-xs text-pink-500 ml-1">推荐</span></h3>
+          <p class="text-sm text-gray-500">从字母开始 · 跟读对比</p>
+        </div>
+        <button id="open-pronunciation" class="btn-primary px-4 py-2 rounded-xl font-bold text-sm text-white">开始</button>
+      </div>
+    </div>
   </section>
 
   <section id="screen-stories" class="hidden">
@@ -158,6 +168,17 @@
       </div>
     </div>
     <div id="conv-content" class="bg-white rounded-2xl p-6 shadow-lg min-h-[400px]"></div>
+  </section>
+
+  <section id="screen-pronunciation" class="hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button id="back-from-pronunciation" class="text-2xl">←</button>
+      <div class="flex-1">
+        <h2 class="text-xl font-bold text-gray-800">🔤 发音练习</h2>
+        <div class="text-xs text-gray-500" id="pron-progress">1/32</div>
+      </div>
+    </div>
+    <div id="pron-content" class="bg-white rounded-2xl p-6 shadow-lg min-h-[400px]"></div>
   </section>
 
   <section id="screen-lesson" class="hidden">
@@ -387,6 +408,93 @@ if ('speechSynthesis' in window) {
   speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
 }
 
+// ==================== 语音识别 (录音对比) ====================
+let recognition = null;
+let isRecording = false;
+
+function initRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const r = new SR();
+  r.lang = 'es-ES';
+  r.continuous = false;
+  r.interimResults = false;
+  r.maxAlternatives = 3;
+  return r;
+}
+
+function startRecording(targetText, onResult, onError) {
+  if (isRecording) return;
+  if (!recognition) recognition = initRecognition();
+  if (!recognition) {
+    onError && onError('浏览器不支持录音');
+    return;
+  }
+  isRecording = true;
+  recognition.onresult = (event) => {
+    isRecording = false;
+    const results = Array.from(event.results[0]).map(r => r.transcript.trim());
+    onResult && onResult(results, targetText);
+  };
+  recognition.onerror = (event) => {
+    isRecording = false;
+    onError && onError(event.error);
+  };
+  recognition.onend = () => { isRecording = false; };
+  try {
+    recognition.start();
+  } catch (e) {
+    isRecording = false;
+    onError && onError(e.message);
+  }
+}
+
+function stopRecording() {
+  if (recognition && isRecording) {
+    try { recognition.stop(); } catch (e) {}
+  }
+}
+
+function comparePronunciation(target, recognized) {
+  const normalize = s => s.toLowerCase()
+    .replace(/[¿¡!?.,]/g, '')
+    .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u').replace(/ü/g, 'u')
+    .replace(/ñ/g, 'n')
+    .replace(/\s+/g, ' ').trim();
+  const t = normalize(target);
+  let best = null;
+  for (const r of recognized) {
+    const nr = normalize(r);
+    if (nr === t) return { match: 1, best: r, similarity: 1 };
+    const sim = stringSimilarity(t, nr);
+    if (!best || sim > best.similarity) best = { match: sim, best: r, similarity: sim };
+  }
+  return best || { match: 0, best: '', similarity: 0 };
+}
+
+function stringSimilarity(a, b) {
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  const longer = a.length > b.length ? a : b;
+  const shorter = a.length > b.length ? b : a;
+  if (longer.length === 0) return 1;
+  const editDistance = levenshtein(longer, shorter);
+  return (longer.length - editDistance) / longer.length;
+}
+
+function levenshtein(a, b) {
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b[i-1] === a[j-1]) matrix[i][j] = matrix[i-1][j-1];
+      else matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, matrix[i][j-1] + 1, matrix[i-1][j] + 1);
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
 function playSound(type) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -455,7 +563,7 @@ function updateDaily() {
 }
 
 function showScreen(name) {
-  ['learn', 'lesson', 'result', 'quests', 'shop', 'profile', 'stories', 'story', 'conversations', 'conversation'].forEach(s => $(`screen-${s}`).classList.add('hidden'));
+  ['learn', 'lesson', 'result', 'quests', 'shop', 'profile', 'stories', 'story', 'conversations', 'conversation', 'pronunciation'].forEach(s => $(`screen-${s}`).classList.add('hidden'));
   $(`screen-${name}`).classList.remove('hidden');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (['learn', 'quests', 'shop', 'profile'].includes(name)) {
@@ -470,6 +578,134 @@ function showScreen(name) {
 function getUnitWords(unit) {
   if (unit.type === 'pronunciation') return unit.items;
   return unit.words;
+}
+
+// ==================== 发音练习 ====================
+let pronIdx = 0;
+let pronScore = 0;
+let pronUnit = null;
+
+function openPronunciation() {
+  pronUnit = UNITS.find(u => u.type === 'pronunciation');
+  if (!pronUnit) return;
+  pronIdx = 0;
+  pronScore = 0;
+  $('pron-progress').textContent = `1/${pronUnit.items.length}`;
+  showScreen('pronunciation');
+  renderPronItem();
+}
+
+function renderPronItem() {
+  if (pronIdx >= pronUnit.items.length) {
+    finishPronunciation();
+    return;
+  }
+  const item = pronUnit.items[pronIdx];
+  const audioExample = item.example ? item.example.es : item.es;
+  $('pron-content').innerHTML = `
+    <div class="text-center">
+      <div class="text-xs text-gray-400 mb-2">${pronIdx + 1} / ${pronUnit.items.length}</div>
+      <div class="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-8 mb-4">
+        <div class="text-7xl font-bold text-pink-600 mb-2" style="font-family: 'Times New Roman', serif;">${item.es}</div>
+        <div class="text-lg text-gray-700 font-medium">${item.zh}</div>
+        ${item.note ? `<div class="text-sm text-gray-500 italic mt-2">${item.note}</div>` : ''}
+      </div>
+      <div class="mb-4">
+        <div class="text-sm text-gray-500 mb-2">示范单词：</div>
+        <div class="bg-gray-50 rounded-xl p-3 inline-block">
+          <span class="text-xl font-bold text-gray-800">${audioExample}</span>
+          <span class="text-gray-500 ml-2">${item.example ? item.example.zh : ''}</span>
+        </div>
+      </div>
+      <div class="flex gap-2 justify-center mb-3">
+        <button id="play-sound" class="btn-secondary px-4 py-3 rounded-xl font-bold flex items-center gap-2">
+          🔊 听发音
+        </button>
+        <button id="play-example" class="btn-secondary px-4 py-3 rounded-xl font-bold flex items-center gap-2">
+          🗣️ 听单词
+        </button>
+      </div>
+      <button id="record-btn" class="btn-primary text-white px-6 py-4 rounded-2xl font-bold text-lg w-full flex items-center justify-center gap-2">
+        🎤 跟我读
+      </button>
+      <div id="record-status" class="mt-3 text-sm min-h-[24px]"></div>
+    </div>
+  `;
+  $('play-sound').addEventListener('click', () => speak(item.es));
+  $('play-example').addEventListener('click', () => speak(audioExample));
+  $('record-btn').addEventListener('click', () => startPronRecording(item));
+  $('pron-progress').textContent = `${pronIdx + 1}/${pronUnit.items.length}`;
+}
+
+function startPronRecording(item) {
+  const status = $('record-status');
+  const target = item.example ? item.example.es : item.es;
+  status.innerHTML = '<div class="text-red-500 font-bold animate-pulse">● 录音中... 请读出单词</div>';
+  $('record-btn').disabled = true;
+  startRecording(target,
+    (recognized, targetText) => {
+      const result = comparePronunciation(targetText, recognized);
+      const targetNorm = targetText.toLowerCase().replace(/[¿¡!?.,]/g, '');
+      if (result.similarity >= 0.75) {
+        status.innerHTML = `
+          <div class="bg-green-50 border-2 border-green-300 rounded-xl p-3">
+            <div class="text-2xl mb-1">✓ 太棒了！</div>
+            <div class="text-sm text-gray-600">你读的是：<b>${result.best}</b></div>
+            <div class="text-sm text-green-600 font-bold">相似度 ${Math.round(result.similarity * 100)}%</div>
+          </div>
+        `;
+        playSound('correct');
+        pronScore++;
+        state.totalXp += 10;
+        state.todayXp += 10;
+        saveState(); updateTopBar();
+        setTimeout(() => { pronIdx++; renderPronItem(); }, 1800);
+      } else {
+        status.innerHTML = `
+          <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3">
+            <div class="text-xl mb-1">🤔 差一点，再试一次</div>
+            <div class="text-sm text-gray-600">你读的是：<b>${result.best || '(没听清)'}</b></div>
+            <div class="text-sm text-gray-600">正确：<b class="text-green-600">${targetNorm}</b></div>
+            <div class="text-sm text-yellow-700 mt-1">相似度 ${Math.round(result.similarity * 100)}%（需 75%）</div>
+            <button id="retry-record" class="btn-primary text-white font-bold py-2 px-4 rounded-xl mt-2 text-sm">🎤 再试</button>
+            <button id="skip-pron" class="btn-secondary font-bold py-2 px-4 rounded-xl mt-2 text-sm">跳过 →</button>
+          </div>
+        `;
+        playSound('wrong');
+        $('retry-record').addEventListener('click', () => startPronRecording(item));
+        $('skip-pron').addEventListener('click', () => { pronIdx++; renderPronItem(); });
+      }
+      $('record-btn').disabled = false;
+    },
+    (err) => {
+      let msg = '录音失败';
+      if (err === 'no-speech') msg = '没听到声音，再试一次';
+      else if (err === 'not-allowed') msg = '请允许麦克风权限';
+      else if (err === 'audio-capture') msg = '找不到麦克风';
+      else if (err === '浏览器不支持录音') msg = '你的浏览器不支持录音，请用 Safari/Chrome';
+      status.innerHTML = `<div class="text-red-500">⚠️ ${msg}</div><button id="retry-record2" class="btn-primary text-white font-bold py-2 px-4 rounded-xl mt-2 text-sm">🎤 再试</button>`;
+      $('retry-record2').addEventListener('click', () => startPronRecording(item));
+      $('record-btn').disabled = false;
+    }
+  );
+}
+
+function finishPronunciation() {
+  const total = pronUnit.items.length;
+  const acc = Math.round((pronScore / total) * 100);
+  $('pron-content').innerHTML = `
+    <div class="text-center bounce-in">
+      <div class="text-6xl mb-3">🎉</div>
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">${acc >= 80 ? '¡Excelente!' : '¡Sigue practicando!'}</h2>
+      <p class="text-gray-600 mb-4">通过 ${pronScore}/${total} 个 (${acc}%)</p>
+      <div class="bg-yellow-50 rounded-2xl p-4 mb-4">
+        <div class="text-3xl font-bold text-yellow-600">+${pronScore * 10} XP</div>
+      </div>
+      <button id="back-from-pron-finish" class="btn-primary px-6 py-3 rounded-2xl font-bold text-white">返回首页</button>
+    </div>
+  `;
+  showConfetti();
+  $('back-from-pron-finish').addEventListener('click', () => showScreen('learn'));
 }
 
 function renderStories() {
@@ -515,25 +751,80 @@ function renderStorySentence() {
     return;
   }
   const s = currentStory.sentences[storySentenceIdx];
+  const safeEs = s.es.replace(/'/g, "\\'").replace(/"/g, '&quot;');
   $('story-content').innerHTML = `
     <div class="text-center">
       <div class="text-xs text-gray-400 mb-1">第 ${storySentenceIdx + 1}/${currentStory.sentences.length} 句</div>
-      <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 mb-6">
+      <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 mb-4">
         <div class="flex items-center justify-center gap-3 mb-3">
-          <button onclick="speak('${s.es.replace(/'/g, "\\'")}')" class="text-3xl hover:scale-110 transition-transform">🔊</button>
+          <button onclick="speak('${safeEs}')" class="text-3xl hover:scale-110 transition-transform">🔊</button>
         </div>
         <div class="text-2xl font-bold text-gray-800 mb-3">${s.es}</div>
         <div class="text-base text-gray-600">${s.zh}</div>
       </div>
-      <button id="next-sentence" class="btn-primary px-8 py-3 rounded-2xl font-bold">
-        ${storySentenceIdx === currentStory.sentences.length - 1 ? '开始答题 →' : '下一句 →'}
+      <button id="story-record-btn" class="btn-primary text-white px-6 py-3 rounded-2xl font-bold text-base w-full flex items-center justify-center gap-2">
+        🎤 跟我读这句
       </button>
+      <div id="story-record-status" class="mt-3 text-sm min-h-[24px]"></div>
+      <div class="flex gap-2 mt-3">
+        <button id="story-skip" class="btn-secondary flex-1 px-4 py-2 rounded-xl font-bold text-sm">跳过 →</button>
+        <button id="story-next-locked" class="btn-primary flex-1 px-4 py-2 rounded-xl font-bold text-sm text-white opacity-50" disabled>
+          下一句 →
+        </button>
+      </div>
     </div>
   `;
-  $('next-sentence').addEventListener('click', () => {
-    storySentenceIdx++;
-    renderStorySentence();
-  });
+  $('story-record-btn').addEventListener('click', () => startStoryRecording(s));
+  $('story-skip').addEventListener('click', () => { storySentenceIdx++; renderStorySentence(); });
+}
+
+function startStoryRecording(s) {
+  const status = $('story-record-status');
+  status.innerHTML = '<div class="text-red-500 font-bold animate-pulse">● 录音中... 请读出句子</div>';
+  $('story-record-btn').disabled = true;
+  $('story-skip').disabled = true;
+  startRecording(s.es,
+    (recognized, target) => {
+      const result = comparePronunciation(target, recognized);
+      if (result.similarity >= 0.6) {
+        status.innerHTML = `
+          <div class="bg-green-50 border-2 border-green-300 rounded-xl p-3">
+            <div class="text-2xl mb-1">✓ 很棒！</div>
+            <div class="text-sm text-gray-600">你读的是：<b>${result.best}</b></div>
+            <div class="text-sm text-green-600 font-bold">相似度 ${Math.round(result.similarity * 100)}%</div>
+          </div>
+        `;
+        playSound('correct');
+        const nextBtn = $('story-next-locked');
+        nextBtn.classList.remove('opacity-50');
+        nextBtn.disabled = false;
+        nextBtn.addEventListener('click', () => { storySentenceIdx++; renderStorySentence(); });
+        $('story-record-btn').textContent = '✓ 已通过';
+      } else {
+        status.innerHTML = `
+          <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3">
+            <div class="text-base mb-1">🤔 再试一次</div>
+            <div class="text-xs text-gray-600">正确：<b class="text-green-600">${s.es}</b></div>
+            <div class="text-xs text-yellow-700">相似度 ${Math.round(result.similarity * 100)}%（需 60%）</div>
+          </div>
+        `;
+        playSound('wrong');
+        $('story-record-btn').disabled = false;
+        $('story-skip').disabled = false;
+        $('story-record-btn').addEventListener('click', () => startStoryRecording(s), { once: true });
+      }
+    },
+    (err) => {
+      let msg = '录音失败';
+      if (err === 'no-speech') msg = '没听到声音，再试一次';
+      else if (err === 'not-allowed') msg = '请允许麦克风权限';
+      else if (err === 'audio-capture') msg = '找不到麦克风';
+      else if (typeof err === 'string' && err.includes('不支持')) msg = '你的浏览器不支持录音';
+      status.innerHTML = `<div class="text-red-500 text-sm">⚠️ ${msg}</div>`;
+      $('story-record-btn').disabled = false;
+      $('story-skip').disabled = false;
+    }
+  );
 }
 
 function renderStoryQuestion() {
@@ -1253,10 +1544,12 @@ $('start-practice').addEventListener('click', () => {
 });
 $('open-stories').addEventListener('click', () => { renderStories(); showScreen('stories'); });
 $('open-conversations').addEventListener('click', () => { renderConversations(); showScreen('conversations'); });
+$('open-pronunciation').addEventListener('click', () => openPronunciation());
 $('back-from-stories').addEventListener('click', () => showScreen('learn'));
 $('back-from-conversations').addEventListener('click', () => showScreen('learn'));
 $('back-from-story').addEventListener('click', () => showScreen('stories'));
 $('back-from-conversation').addEventListener('click', () => showScreen('conversations'));
+$('back-from-pronunciation').addEventListener('click', () => showScreen('learn'));
 document.querySelectorAll('.nav-btn').forEach(b => {
   b.addEventListener('click', () => showScreen(b.dataset.screen));
 });
