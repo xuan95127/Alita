@@ -3044,9 +3044,13 @@ function generateQuestions(words, isPractice, unit) {
   if (pool.length < 4) pool = words;
   const qs = [];
   words.forEach((w, i) => {
-    const types = ['choice_es_zh', 'choice_zh_es', 'listen', 'type', 'match', 'order'];
-    shuffle(types);
-    types.slice(0, 3).forEach(t => {
+    // 排序题需要例句 >= 3 词才有意义；拼写题太短（<=1 词）跳过
+    const exampleWords = w.example ? w.example.es.split(/\s+/).filter(x => x.length > 0) : [];
+    const availableTypes = ['choice_es_zh', 'choice_zh_es', 'listen', 'type', 'match'];
+    if (exampleWords.length >= 3) availableTypes.push('order');
+    if (w.es && w.es.split(/\s+/).length >= 1 && !/^\W+$/.test(w.es)) availableTypes.push('type');
+    shuffle(availableTypes);
+    availableTypes.slice(0, 3).forEach(t => {
       const others = pool.filter(x => x.es !== w.es);
       shuffle(others);
       const opts = shuffle([w, ...others.slice(0, 3)]);
@@ -3251,15 +3255,20 @@ function bindQuestionEvents(q, correctKey, area) {
 
     input.focus();
     const check = () => {
-      // 模糊匹配：先显式把 ñ→n，再 NFD 去重音，再去所有空白
-      // （iOS Safari 偶尔 IME 输入会带隐藏字符，trim 不一定能清干净）
+      // 模糊匹配：先显式把 ñ→n，再 NFD 去重音
+      // 单字（无空格）再去空白；词组（带空格）保留空格让孩子学着用
       const normalize = s => s
         .replace(/ñ/g, 'n').replace(/Ñ/g, 'N')
         .replace(/ü/g, 'u').replace(/Ü/g, 'U')
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, '').toLowerCase();
+        .toLowerCase()
+        .trim();
+      const isPhrase = /\s/.test(correctKey);
+      const finalNormalize = isPhrase
+        ? s => normalize(s).replace(/\s+/g, ' ')  // 多空格合并成单空格
+        : s => normalize(s).replace(/\s+/g, '');  // 单字不要求空格
       const ans = input.value;
-      const ok = normalize(ans) === normalize(correctKey);
+      const ok = finalNormalize(ans) === finalNormalize(correctKey);
       submit.disabled = true; input.disabled = true;
       if (ok) {
         submit.classList.remove('btn-primary'); submit.classList.add('bg-green-500');
@@ -3306,17 +3315,26 @@ function bindQuestionEvents(q, correctKey, area) {
           playSound('wrong'); loseHeart();
           area.classList.add('shake');
           setTimeout(() => area.classList.remove('shake'), 400);
-          status.textContent = '✗ 配错了，再试试';
+          // 明确标红错的两个瓦片 + 告诉用户正确答案是什么
+          const leftText = selected.left.textContent.replace(/🔊/g, '').trim();
+          const rightText = selected.right.textContent.replace(/🔊/g, '').trim();
+          const correctPair = q.options.find(o => o.es === selected.left.dataset.id);
+          const correctZh = correctPair ? correctPair.zh : '?';
+          selected.left.classList.add('border-red-500', 'bg-red-50');
+          selected.right.classList.add('border-red-500', 'bg-red-50');
+          status.innerHTML = `<span class="text-red-500 font-bold">✗ "${leftText}" 不对应 "${rightText}"</span><br><span class="text-green-600 text-sm">正确：${leftText} → ${correctZh}</span>`;
           setTimeout(() => {
-            [selected.left, selected.right].forEach(t => t.classList.remove('border-red-500', 'bg-red-50'));
-            status.textContent = '点击左右两边的单词进行配对';
-          }, 1000);
+            [selected.left, selected.right].forEach(t => t.classList.remove('border-red-500', 'bg-red-50', 'border-blue-500', 'bg-blue-50'));
+            status.innerHTML = '点击左右两边的单词进行配对';
+          }, 2500);
         }
         selected = { left: null, right: null };
       } else if (selected.left) status.textContent = '现在选右边的中文';
     };
     tiles.forEach(t => {
       t.addEventListener('click', () => {
+        // 清除之前可能残留的红色样式（避免重复点击同一个）
+        t.classList.remove('border-red-500', 'bg-red-50');
         t.classList.add('border-blue-500', 'bg-blue-50');
         if (t.dataset.side === 'left') selected.left = t; else selected.right = t;
         updateStatus();

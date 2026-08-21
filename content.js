@@ -1281,7 +1281,7 @@ const UNITS = [
       { es: "Que descanses", zh: "好好休息", example: { es: "Que descanses.", zh: "好好休息。" } },
       { es: "Que te vaya bien", zh: "祝你一切顺利", example: { es: "Que te vaya bien.", zh: "祝你一切顺利。" } },
       { es: "Buen provecho", zh: "祝你好胃口", example: { es: "¡Buen provecho!", zh: "祝你好胃口！" } },
-      { es: "Salud", zh: "保重/干杯", example: { es: "¡Salud!", zh: "干杯！" } },
+      { es: "salud", zh: "保重/干杯", example: { es: "¡Salud!", zh: "干杯！" } },
       { es: "¡Felicidades!", zh: "恭喜！", example: { es: "¡Felicidades!", zh: "恭喜！" } },
       { es: "¡Bien hecho!", zh: "做得好！", example: { es: "¡Bien hecho!", zh: "做得好！" } },
       { es: "¡Ánimo!", zh: "加油！", example: { es: "¡Ánimo!", zh: "加油！" } },
