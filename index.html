@@ -487,10 +487,15 @@
           <div class="text-xs text-gray-500">点选后自动试听一句</div>
         </div>
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-2 mb-3">
         <button onclick="setVoiceGender('auto')" id="voice-auto" class="flex-1 py-3 rounded-2xl font-bold text-sm transition">自动</button>
         <button onclick="setVoiceGender('female')" id="voice-female" class="flex-1 py-3 rounded-2xl font-bold text-sm transition">女声 👩</button>
         <button onclick="setVoiceGender('male')" id="voice-male" class="flex-1 py-3 rounded-2xl font-bold text-sm transition">男声 👨</button>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="setSpeechRate('slow')" id="rate-slow" class="flex-1 py-2 rounded-xl font-bold text-xs transition">🐢 慢 0.55x</button>
+        <button onclick="setSpeechRate('normal')" id="rate-normal" class="flex-1 py-2 rounded-xl font-bold text-xs transition">正常 0.85x</button>
+        <button onclick="setSpeechRate('fast')" id="rate-fast" class="flex-1 py-2 rounded-xl font-bold text-xs transition">🚀 快 1.0x</button>
       </div>
     </div>
 
@@ -786,6 +791,7 @@ function defaultState() {
     // 设置
     soundOn: true,
     voiceGender: 'auto',  // 'auto' | 'female' | 'male'
+    speechRate: 'normal', // 'slow' | 'normal' | 'fast'
     // 本周 PK
     weeklyXp: 0, weeklyLessons: 0, weekStartDate: null,
     // 总榜历史：每周一清零前先存档到这里
@@ -1081,12 +1087,15 @@ function shuffle(arr) {
   return arr;
 }
 
-function speak(text) {
+function speak(text, opts = {}) {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'es-ES';
-  u.rate = 0.85;
+  // 速度：用户设置（slow/normal/fast）或调用方传
+  const userRate = (typeof state !== 'undefined' && state.speechRate) || 'normal';
+  const speedMap = { slow: 0.55, normal: 0.85, fast: 1.0 };
+  u.rate = opts.rate !== undefined ? opts.rate : speedMap[userRate];
   // 根据用户偏好设置 pitch（模拟男/女声）
   const gender = (typeof state !== 'undefined' && state.voiceGender) || 'auto';
   if (gender === 'female') u.pitch = 1.3;
@@ -1139,6 +1148,26 @@ function updateVoiceButtons() {
       }
     }
   });
+  // 速度按钮
+  const r = (typeof state !== 'undefined' && state.speechRate) || 'normal';
+  ['slow', 'normal', 'fast'].forEach(k => {
+    const btn = $('rate-' + k);
+    if (btn) {
+      if (k === r) {
+        btn.className = 'flex-1 py-2 rounded-xl font-bold text-xs transition bg-green-500 text-white shadow-md';
+      } else {
+        btn.className = 'flex-1 py-2 rounded-xl font-bold text-xs transition bg-gray-100 text-gray-600';
+      }
+    }
+  });
+}
+
+function setSpeechRate(r) {
+  state.speechRate = r;
+  saveCurrentProfile();
+  updateVoiceButtons();
+  // 试听
+  setTimeout(() => speak('Hola, ¿cómo estás?'), 200);
 }
 
 // 数据导出/导入
@@ -2292,6 +2321,9 @@ function renderPronunciationItem() {
         <button id="prn-listen" class="btn-primary px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
           🔊 听发音
         </button>
+        <button id="prn-listen-slow" class="btn-secondary px-4 py-3 rounded-2xl font-bold flex items-center gap-1 text-sm" title="慢速播放">
+          🐢
+        </button>
         <button id="prn-record" class="btn-danger px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
           🎤 跟我读
         </button>
@@ -2305,6 +2337,7 @@ function renderPronunciationItem() {
     </div>
   `;
   $('prn-listen').addEventListener('click', () => speak(item.text));
+  $('prn-listen-slow').addEventListener('click', () => speak(item.text, { rate: 0.5 }));
   $('prn-record').addEventListener('click', () => handlePronunciationRecord(item));
   $('prn-skip-initial').addEventListener('click', () => { prnItemIdx++; renderPronunciationItem(); });
 }
