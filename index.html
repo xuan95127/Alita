@@ -2026,6 +2026,8 @@ function showGrammarCard(unit, onStart) {
   const startBtn = $('grammar-card-start');
   if (startBtn) startBtn.addEventListener('click', () => { closeModal(); onStart(); });
 }
+
+function showUnitDetail(unit) {
   const level = unit.level || getUnitLevel(unit.id);
   $('unit-detail-title').innerHTML = `第 ${unit.id} 单元 <span class="text-xs ${LEVEL_COLORS[level]} text-white px-2 py-0.5 rounded align-middle ml-1">${level}</span>`;
   $('unit-detail-subtitle').textContent = `${unit.title} · ${(unit.words || unit.items).length} 词`;
