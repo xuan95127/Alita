@@ -256,13 +256,13 @@
       <button id="open-stories" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition">
         <div class="text-3xl mb-2">📖</div>
         <div class="font-bold text-gray-800 text-sm">西语故事</div>
-        <div class="text-xs text-gray-600" id="home-stories-count">15 个 · 边读边学</div>
+        <div class="text-xs text-gray-600" id="home-stories-count">— 个 · 加载中</div>
         <div class="text-[10px] text-gray-700 mt-1 font-bold" id="home-stories-progress"></div>
       </button>
       <button id="open-conversations" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition">
         <div class="text-3xl mb-2">💬</div>
         <div class="font-bold text-gray-800 text-sm">情景对话</div>
-        <div class="text-xs text-gray-600" id="home-convs-count">5 个场景</div>
+        <div class="text-xs text-gray-600" id="home-convs-count">— 个场景</div>
         <div class="text-[10px] text-gray-700 mt-1 font-bold" id="home-convs-progress"></div>
       </button>
     </div>
@@ -1792,9 +1792,21 @@ function updateHomeStats() {
   const total = UNITS.length;
   const done = UNITS.filter(u => isUnitCompleted(u.id)).length;
   $('units-progress-label').textContent = `${done} / ${total}`;
-  // 故事和对话数（动态）
-  if (typeof STORIES !== 'undefined') $('home-stories-count').textContent = `${STORIES.length} 个 · 边读边学`;
-  if (typeof CONVERSATIONS !== 'undefined') $('home-convs-count').textContent = `${CONVERSATIONS.length} 个场景`;
+  // 故事和对话数 + 完成进度
+  if (!state.completedStories) state.completedStories = [];
+  if (!state.completedConversations) state.completedConversations = [];
+  if (typeof STORIES !== 'undefined') {
+    $('home-stories-count').textContent = `${STORIES.length} 个 · 边读边学`;
+    const storiesDone = state.completedStories.filter(id => STORIES.some(s => s.id === id)).length;
+    const sp = $('home-stories-progress');
+    if (sp) sp.textContent = storiesDone > 0 ? `✓ 已读 ${storiesDone} 个` : '';
+  }
+  if (typeof CONVERSATIONS !== 'undefined') {
+    $('home-convs-count').textContent = `${CONVERSATIONS.length} 个场景`;
+    const convsDone = state.completedConversations.filter(id => CONVERSATIONS.some(c => c.id === id)).length;
+    const cp = $('home-convs-progress');
+    if (cp) cp.textContent = convsDone > 0 ? `✓ 已完成 ${convsDone} 个` : '';
+  }
   // 问候语（按时间）
   const hour = new Date().getHours();
   let greet = '¡Hola!';
@@ -1816,7 +1828,7 @@ function updateContinueCard() {
       $('continue-emoji').textContent = last.emoji;
       $('continue-title').textContent = `继续：第 ${last.id} 单元 · ${last.title}`;
       const wc = (last.words || last.items).length;
-      $('continue-subtitle').textContent = `${wc} 词 · 上次学到一半`;
+      $('continue-subtitle').textContent = `${wc} 词 · 重新开始`;
       btn.textContent = '继续 →';
       btn.onclick = () => startLesson(last);
       return;
@@ -2078,7 +2090,7 @@ function showUnitDetail(unit) {
   if (!existing) {
     existing = document.createElement('div');
     existing.className = 'unit-story-tip';
-    vocabSection.insertBefore(existing, grid.parentElement);
+    vocabSection.insertBefore(existing, grid);
   }
   existing.innerHTML = story + tipBlock;
   $('unit-detail-start').onclick = () => { closeModal(); showScreen('learn'); setTimeout(() => startLesson(unit), 100); };
@@ -2119,17 +2131,19 @@ function openPronunciation() {
 function renderStories() {
   const list = $('stories-list');
   list.innerHTML = '';
+  if (!state.completedStories) state.completedStories = [];
   STORIES.forEach(s => {
+    const done = state.completedStories.includes(s.id);
     const div = document.createElement('div');
-    div.className = 'bg-white rounded-2xl p-4 shadow cursor-pointer hover:shadow-lg transition-shadow';
+    div.className = `bg-white rounded-2xl p-4 shadow cursor-pointer hover:shadow-lg transition-shadow ${done ? 'opacity-75 bg-green-50/30' : ''}`;
     div.innerHTML = `
       <div class="flex items-center gap-3">
         <div class="text-3xl">${s.icon}</div>
-        <div class="flex-1">
-          <h3 class="font-bold text-gray-800">${s.title}</h3>
+        <div class="flex-1 min-w-0">
+          <h3 class="font-bold text-gray-800 flex items-center gap-2">${s.title}${done ? '<span class="text-green-500 text-sm">✓</span>' : ''}</h3>
           <p class="text-sm text-gray-500">${s.description} · ${s.level} · ${s.questions.length} 题</p>
         </div>
-        <div class="text-2xl">▶️</div>
+        <div class="text-2xl flex-shrink-0">${done ? '🔁' : '▶️'}</div>
       </div>
     `;
     div.addEventListener('click', () => openStory(s));
@@ -2311,25 +2325,32 @@ function finishStory() {
   state.totalXp += storyScore * 5 + 10;
   state.todayXp += storyScore * 5 + 10;
   state.totalLessons++;
+  // 记录完成的 story
+  if (!state.completedStories) state.completedStories = [];
+  if (!state.completedStories.includes(currentStory.id)) {
+    state.completedStories.push(currentStory.id);
+  }
   saveState(); updateTopBar(); updateDaily();
   if (acc >= 80) { showConfetti(); playSound('complete'); }
-  $('back-to-stories').addEventListener('click', () => showScreen('stories'));
+  $('back-to-stories').addEventListener('click', () => { renderStories(); showScreen('stories'); });
 }
 
 function renderConversations() {
   const list = $('conversations-list');
   list.innerHTML = '';
+  if (!state.completedConversations) state.completedConversations = [];
   CONVERSATIONS.forEach(c => {
+    const done = state.completedConversations.includes(c.id);
     const div = document.createElement('div');
-    div.className = 'bg-white rounded-2xl p-4 shadow cursor-pointer hover:shadow-lg transition-shadow';
+    div.className = `bg-white rounded-2xl p-4 shadow cursor-pointer hover:shadow-lg transition-shadow ${done ? 'opacity-75 bg-green-50/30' : ''}`;
     div.innerHTML = `
       <div class="flex items-center gap-3">
         <div class="text-3xl">${c.icon}</div>
-        <div class="flex-1">
-          <h3 class="font-bold text-gray-800">${c.title}</h3>
+        <div class="flex-1 min-w-0">
+          <h3 class="font-bold text-gray-800 flex items-center gap-2">${c.title}${done ? '<span class="text-green-500 text-sm">✓</span>' : ''}</h3>
           <p class="text-sm text-gray-500">${c.description} · ${c.level}</p>
         </div>
-        <div class="text-2xl">▶️</div>
+        <div class="text-2xl flex-shrink-0">${done ? '🔁' : '▶️'}</div>
       </div>
     `;
     div.addEventListener('click', () => openConversation(c));
@@ -2783,9 +2804,15 @@ function finishConversation() {
   state.totalXp += 20;
   state.todayXp += 20;
   state.totalLessons++;
+  // 记录完成的 conv
+  if (!state.completedConversations) state.completedConversations = [];
+  if (!currentConv) currentConv = { id: null };
+  if (currentConv.id && !state.completedConversations.includes(currentConv.id)) {
+    state.completedConversations.push(currentConv.id);
+  }
   saveState(); updateTopBar(); updateDaily();
   showConfetti(); playSound('complete');
-  $('back-to-convs').addEventListener('click', () => showScreen('conversations'));
+  $('back-to-convs').addEventListener('click', () => { renderConversations(); showScreen('conversations'); });
 }
 
 let unitsExpanded = false;
@@ -2876,7 +2903,7 @@ function renderHome() {
     `;
     list.appendChild(row);
     if (unlocked) {
-      const btn = row.querySelector('button');
+      const btn = row.querySelector('button.unit-circle');
       btn.addEventListener('click', (e) => {
         if (e.target.closest('.unit-info-btn')) {
           showUnitDetail(unit);
@@ -2884,15 +2911,17 @@ function renderHome() {
           startLesson(unit);
         }
       });
-      // 加一个小眼睛图标
+      // 把 infoBtn 作为独立元素加在 circle 旁边 (避免嵌套 button 引起事件冒泡问题)
       const infoBtn = document.createElement('button');
-      infoBtn.className = 'unit-info-btn absolute text-lg opacity-60 hover:opacity-100';
+      infoBtn.className = 'unit-info-btn absolute text-sm opacity-60 hover:opacity-100 bg-white rounded-full w-7 h-7 flex items-center justify-center shadow';
       infoBtn.textContent = '👀';
       infoBtn.title = '查看词汇';
-      infoBtn.style.cssText = 'top:-4px;left:-4px;';
-      const circle = row.querySelector('.unit-circle');
-      circle.style.position = 'relative';
-      circle.appendChild(infoBtn);
+      infoBtn.style.cssText = 'top:-6px;left:-6px;';
+      const wrap = document.createElement('div');
+      wrap.className = 'relative w-20 h-20 flex-shrink-0';
+      btn.parentNode.insertBefore(wrap, btn);
+      wrap.appendChild(btn);
+      wrap.appendChild(infoBtn);
     }
   });
 
@@ -3001,6 +3030,19 @@ document.querySelectorAll('.buy-btn').forEach(btn => {
     state.gems -= cost;
     if (item === 'hearts') state.hearts = 5;
     else if (item === 'streak_freeze') state.streakFreezes++;
+    else if (item === 'streak_repair') {
+      // 恢复断签: 把 streak 设回上次断之前的数 (用 streakFreezes 间接实现 +1 freeze)
+      if (state.streak === 0) {
+        state.streak = 1; state.lastStreakDate = new Date().toDateString();
+        showModal(`<h3 class="text-2xl font-bold mb-2">🚑 修复成功</h3><p class="text-gray-600 mb-2">连胜已恢复为 1 天</p><p class="text-xs text-gray-500">建议从今天开始重建连胜</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">好的</button>`);
+      } else {
+        // 没断签,退回宝石
+        state.gems += cost;
+        showModal(`<h3 class="text-xl font-bold mb-2">😀 还没断签</h3><p class="text-gray-600">连胜还在,不需要修复哦</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">好的</button>`);
+        saveState(); updateTopBar();
+        return;
+      }
+    }
     else if (item === 'mystery') {
       const reward = 20 + Math.floor(Math.random() * 31);
       state.totalXp += reward; state.todayXp += reward;
@@ -3594,14 +3636,8 @@ $('next-lesson').addEventListener('click', () => {
   }
 });
 $('start-practice').addEventListener('click', () => {
-  const learned = UNITS.filter(u => isUnitCompleted(u.id) || isUnitUnlocked(u.id));
-  if (learned.length === 0) {
-    showModal(`<h3 class="text-xl font-bold mb-2">还没学过单词</h3><p class="text-gray-600">先完成一个单元吧！</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">好的</button>`);
-    return;
-  }
-  const allWords = [];
-  learned.forEach(u => getUnitWords(u).forEach(w => allWords.push(w)));
-  startLesson({ id: 0, title: '综合复习', words: allWords, emoji: '📚' }, true);
+  // 复用 startReview 的逻辑（只学已学过的，不算未完成的）
+  startReview();
 });
 $('open-stories').addEventListener('click', () => { renderStories(); showScreen('stories'); });
 $('open-conversations').addEventListener('click', () => { renderConversations(); showScreen('conversations'); });
