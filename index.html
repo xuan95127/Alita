@@ -459,6 +459,20 @@
         <div class="absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition peer-checked:translate-x-5"></div>
       </label>
     </div>
+    <div class="bg-white rounded-2xl p-4 shadow mb-3">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="text-2xl">🗣️</div>
+        <div class="flex-1">
+          <div class="font-bold text-gray-800 text-sm">发音人</div>
+          <div class="text-xs text-gray-500">点选后自动试听一句</div>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="setVoiceGender('auto')" id="voice-auto" class="flex-1 py-2 rounded-xl font-bold text-sm bg-gray-100 text-gray-600">自动</button>
+        <button onclick="setVoiceGender('female')" id="voice-female" class="flex-1 py-2 rounded-xl font-bold text-sm bg-gray-100 text-gray-600">女声 👩</button>
+        <button onclick="setVoiceGender('male')" id="voice-male" class="flex-1 py-2 rounded-xl font-bold text-sm bg-gray-100 text-gray-600">男声 👨</button>
+      </div>
+    </div>
     <div class="bg-white rounded-2xl p-4 shadow mb-3 flex items-center gap-3">
       <div class="text-2xl">📖</div>
       <div class="flex-1">
@@ -731,6 +745,7 @@ function defaultState() {
     listenedCount: 0,
     // 设置
     soundOn: true,
+    voiceGender: 'auto',  // 'auto' | 'female' | 'male'
     // 本周 PK
     weeklyXp: 0, weeklyLessons: 0, weekStartDate: null,
     // 总榜历史：每周一清零前先存档到这里
@@ -1032,15 +1047,58 @@ function speak(text) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'es-ES';
   u.rate = 0.85;
-  u.pitch = 1.1;
+  // 根据用户偏好设置 pitch（模拟男/女声）
+  const gender = (typeof state !== 'undefined' && state.voiceGender) || 'auto';
+  if (gender === 'female') u.pitch = 1.3;
+  else if (gender === 'male') u.pitch = 0.85;
+  else u.pitch = 1.1;
+  // 选西语 voice
   const voices = window.speechSynthesis.getVoices();
-  const esVoice = voices.find(v => v.lang.startsWith('es')) || voices.find(v => v.lang.includes('ES'));
-  if (esVoice) u.voice = esVoice;
+  const esVoices = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('es'));
+  let chosen = null;
+  if (gender === 'female' && esVoices.length > 0) {
+    // 已知女声关键词
+    const fk = ['monica', 'paulina', 'helena', 'sara', 'laura', 'samantha', 'karen', 'femenina', 'female', 'mujer', 'maria', 'ana', 'victoria', 'elvira', 'rosa'];
+    chosen = esVoices.find(v => fk.some(k => v.name.toLowerCase().includes(k)));
+  } else if (gender === 'male' && esVoices.length > 0) {
+    const mk = ['jorge', 'diego', 'miguel', 'juan', 'carlos', 'masculino', 'male', 'hombre', 'pablo', 'pedro', 'raul', 'enrique', 'jose'];
+    chosen = esVoices.find(v => mk.some(k => v.name.toLowerCase().includes(k)));
+  }
+  if (!chosen) chosen = esVoices[0];
+  if (chosen) u.voice = chosen;
   window.speechSynthesis.speak(u);
 }
 
 if ('speechSynthesis' in window) {
   speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+}
+
+// ==================== 设置 ====================
+function toggleSetting(key, value) {
+  state[key] = value;
+  saveCurrentProfile();
+}
+
+function setVoiceGender(g) {
+  state.voiceGender = g;
+  saveCurrentProfile();
+  updateVoiceButtons();
+  // 试听一句
+  setTimeout(() => speak('Hola, ¿cómo estás?'), 200);
+}
+
+function updateVoiceButtons() {
+  const g = (typeof state !== 'undefined' && state.voiceGender) || 'auto';
+  ['auto', 'female', 'male'].forEach(k => {
+    const btn = $('voice-' + k);
+    if (btn) {
+      if (k === g) {
+        btn.className = 'flex-1 py-2 rounded-xl font-bold text-sm bg-green-500 text-white';
+      } else {
+        btn.className = 'flex-1 py-2 rounded-xl font-bold text-sm bg-gray-100 text-gray-600';
+      }
+    }
+  });
 }
 
 // ==================== 语音识别 (录音对比) ====================
@@ -1726,6 +1784,10 @@ function showScreen(name) {
   if (name === 'learn') renderHome();
   if (name === 'quests') renderQuests();
   if (name === 'profile') renderProfile();
+  if (name === 'settings') {
+    $('setting-sound').checked = state.soundOn !== false;
+    updateVoiceButtons();
+  }
   updateTopBar(); updateDaily();
 }
 
