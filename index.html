@@ -3252,7 +3252,9 @@ function bindQuestionEvents(q, correctKey, area) {
     input.focus();
     const check = () => {
       const ans = input.value.trim().toLowerCase();
-      const ok = ans === correctKey;
+      // 模糊匹配：去掉重音符号后再比（容许 n~ñ、á~a 等）
+      const normalize = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+      const ok = normalize(ans) === normalize(correctKey);
       submit.disabled = true; input.disabled = true;
       if (ok) {
         submit.classList.remove('btn-primary'); submit.classList.add('bg-green-500');
@@ -3266,7 +3268,10 @@ function bindQuestionEvents(q, correctKey, area) {
         playSound('wrong'); loseHeart();
         area.classList.add('shake');
         setTimeout(() => area.classList.remove('shake'), 400);
-        $('type-hint').textContent = `提示：${correctKey[0]}... (${correctKey.length} 个字符)`;
+        const first = correctKey[0];
+        const hasSpecial = /[ñáéíóúü]/i.test(correctKey);
+        const specialHint = hasSpecial ? '（注意 ñ/重音符号，无键盘可只输 n/a）' : '';
+        $('type-hint').textContent = `提示：以 "${first}" 开头，共 ${correctKey.length} 个字符 ${specialHint}`;
         setTimeout(() => {
           input.disabled = false; input.value = ''; input.focus();
           submit.disabled = false;
