@@ -2177,11 +2177,11 @@ function renderStorySentence() {
         </button>
       </div>
       <div id="story-record-status" class="min-h-[60px] mb-3"></div>
-      <button id="story-next" class="w-full btn-primary text-white font-bold py-3 px-4 rounded-2xl text-base opacity-50 cursor-not-allowed" disabled>
+      <button id="story-next" class="w-full btn-primary text-white font-bold py-3 px-4 rounded-2xl text-base">
         ${isLast ? '开始答题 →' : '下一句 →'}
       </button>
       <div class="text-center mt-2">
-        <button id="story-skip-initial" class="text-sm text-gray-400 underline hover:text-gray-600 py-1 px-2">
+        <button id="story-skip-initial" class="text-sm text-gray-400 underline hover:text-gray-600 py-1 px-2" style="display:none">
           不想跟读？跳过这句 →
         </button>
       </div>
@@ -2190,6 +2190,8 @@ function renderStorySentence() {
   $('story-listen').addEventListener('click', () => speak(safeEs));
   $('story-record').addEventListener('click', () => startStoryRecording(s));
   $('story-skip-initial').addEventListener('click', () => { storySentenceIdx++; renderStorySentence(); });
+  // 下一句按钮：始终可点(跟读可选)
+  $('story-next').addEventListener('click', () => { storySentenceIdx++; renderStorySentence(); });
   // 自动播放 1 次
   setTimeout(() => speak(safeEs), 400);
 }
@@ -2227,12 +2229,9 @@ function startStoryRecording(s) {
           </div>
         `;
         playSound('correct');
-        nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        nextBtn.disabled = false;
         recordBtn.innerHTML = '<span class="text-xl">✓</span> 已通过';
         recordBtn.disabled = true;
         listenBtn.disabled = false;
-        nextBtn.addEventListener('click', () => { storySentenceIdx++; renderStorySentence(); });
       } else {
         status.innerHTML = `
           <div class="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-3">
@@ -2662,11 +2661,11 @@ function renderConvLine() {
               </button>
             </div>
             <div id="conv-record-status" class="min-h-[50px] mb-3"></div>
-            <button id="conv-next" class="w-full btn-primary text-white font-bold py-3 px-4 rounded-2xl text-base opacity-50 cursor-not-allowed" disabled>
+            <button id="conv-next" class="w-full btn-primary text-white font-bold py-3 px-4 rounded-2xl text-base">
               继续 →
             </button>
             <div class="text-center mt-2">
-              <button id="conv-skip-initial" class="text-sm text-gray-400 underline hover:text-gray-600 py-1 px-2">
+              <button id="conv-skip-initial" class="text-sm text-gray-400 underline hover:text-gray-600 py-1 px-2" style="display:none">
                 不想跟读？跳过 →
               </button>
             </div>
@@ -2746,12 +2745,6 @@ function startConvRecording(targetText, feedbackText) {
           recordBtn.disabled = true;
         }
         if (listenBtn) listenBtn.disabled = false;
-        // 解锁下一句按钮
-        const nextBtn = $('conv-next');
-        if (nextBtn) {
-          nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-          nextBtn.disabled = false;
-        }
       } else {
         status.innerHTML = `
           <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3">
@@ -2769,8 +2762,6 @@ function startConvRecording(targetText, feedbackText) {
         $('conv-retry').addEventListener('click', () => startConvRecording(targetText, feedbackText));
         $('conv-skip-pron').addEventListener('click', () => {
           if (recordBtn) recordBtn.disabled = true;
-          const nextBtn = $('conv-next');
-          if (nextBtn) { nextBtn.classList.remove('opacity-50', 'cursor-not-allowed'); nextBtn.disabled = false; }
         });
       }
     }, 8000);

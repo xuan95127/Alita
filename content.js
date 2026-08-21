@@ -40,7 +40,7 @@ const UNITS = [
       { es: "é", zh: "重音 é", example: { es: "café.", zh: "咖啡" }, note: "重读" },
       { es: "í", zh: "重音 í", example: { es: "aquí.", zh: "这里" }, note: "重读" },
       { es: "ó", zh: "重音 ó", example: { es: "mató.", zh: "他杀了" }, note: "重读" },
-      { es: "ú", zh: "重音 ú", example: { es: "azúl.", zh: "蓝色" }, note: "重读" }
+      { es: "ú", zh: "重音 ú", example: { es: "música.", zh: "音乐" }, note: "重读" }
     ]
   },
 
