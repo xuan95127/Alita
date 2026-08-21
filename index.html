@@ -1070,6 +1070,19 @@ function checkStreak() {
   }
 }
 
+// 任意学习行为后调用:更新连续打卡
+function bumpStreak() {
+  const today = new Date().toDateString();
+  if (state.lastStreakDate !== today) {
+    if (state.lastStreakDate) {
+      const last = new Date(state.lastStreakDate);
+      const diff = (new Date(today) - last) / (1000 * 60 * 60 * 24);
+      if (diff === 1) state.streak++; else if (diff > 1) state.streak = 1;
+    } else state.streak = 1;
+    state.lastStreakDate = today;
+  }
+}
+
 function generateQuests() {
   return [
     { id: 'q1', text: '获得 10 XP', target: 10, progress: 0, reward: 5, icon: '⭐' },
@@ -2330,6 +2343,8 @@ function finishStory() {
   if (!state.completedStories.includes(currentStory.id)) {
     state.completedStories.push(currentStory.id);
   }
+  bumpStreak();
+  state.lastActiveDate = new Date().toDateString();
   saveState(); updateTopBar(); updateDaily();
   if (acc >= 80) { showConfetti(); playSound('complete'); }
   $('back-to-stories').addEventListener('click', () => { renderStories(); showScreen('stories'); });
@@ -2633,6 +2648,8 @@ function finishPronunciationLesson() {
   state.totalXp += prnScore * 8 + 20;
   state.todayXp += prnScore * 8 + 20;
   state.totalLessons++;
+  bumpStreak();
+  state.lastActiveDate = new Date().toDateString();
   saveState(); updateTopBar(); updateDaily();
   if (acc >= 80) { showConfetti(); playSound('complete'); }
   $('prn-back-list').addEventListener('click', () => showScreen('pronunciation'));
@@ -2810,6 +2827,8 @@ function finishConversation() {
   if (currentConv.id && !state.completedConversations.includes(currentConv.id)) {
     state.completedConversations.push(currentConv.id);
   }
+  bumpStreak();
+  state.lastActiveDate = new Date().toDateString();
   saveState(); updateTopBar(); updateDaily();
   showConfetti(); playSound('complete');
   $('back-to-convs').addEventListener('click', () => { renderConversations(); showScreen('conversations'); });
@@ -3555,19 +3574,11 @@ function finishLesson(endedEarly = false) {
   state.totalLessons++;
   if (accuracy === 100) state.perfectLessons++;
 
-  const today = new Date().toDateString();
-  if (state.lastStreakDate !== today) {
-    if (state.lastStreakDate) {
-      const last = new Date(state.lastStreakDate);
-      const diff = (new Date(today) - last) / (1000 * 60 * 60 * 24);
-      if (diff === 1) state.streak++; else if (diff > 1) state.streak = 1;
-    } else state.streak = 1;
-    state.lastStreakDate = today;
-  }
+  bumpStreak();
   const hour = new Date().getHours();
   if (hour >= 22 || hour < 5) state.nightLearner = true;
   if (hour < 7) state.earlyLearner = true;
-  state.lastActiveDate = today;
+  state.lastActiveDate = new Date().toDateString();
   state.totalXp += xpEarned; state.todayXp += xpEarned; state.weeklyXp += xpEarned; state.weeklyLessons += 1;
   if (state.doubleXp > 0) state.doubleXp = Math.max(0, state.doubleXp - 1);
   if (accuracy === 100) state.gems += 5;
