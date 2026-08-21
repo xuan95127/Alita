@@ -3251,9 +3251,14 @@ function bindQuestionEvents(q, correctKey, area) {
 
     input.focus();
     const check = () => {
-      const ans = input.value.trim().toLowerCase();
-      // 模糊匹配：去掉重音符号后再比（容许 n~ñ、á~a 等）
-      const normalize = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+      // 模糊匹配：先显式把 ñ→n，再 NFD 去重音，再去所有空白
+      // （iOS Safari 偶尔 IME 输入会带隐藏字符，trim 不一定能清干净）
+      const normalize = s => s
+        .replace(/ñ/g, 'n').replace(/Ñ/g, 'N')
+        .replace(/ü/g, 'u').replace(/Ü/g, 'U')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '').toLowerCase();
+      const ans = input.value;
       const ok = normalize(ans) === normalize(correctKey);
       submit.disabled = true; input.disabled = true;
       if (ok) {
@@ -3263,22 +3268,21 @@ function bindQuestionEvents(q, correctKey, area) {
         setTimeout(nextQuestion, 900);
       } else {
         submit.classList.remove('btn-primary'); submit.classList.add('bg-danger');
-        submit.textContent = '✗ 再试一次';
+        submit.textContent = '✗ 答错了';
         submit.style.background = '#FF4B4B';
         playSound('wrong'); loseHeart();
         area.classList.add('shake');
         setTimeout(() => area.classList.remove('shake'), 400);
-        const first = correctKey[0];
-        const hasSpecial = /[ñáéíóúü]/i.test(correctKey);
-        const specialHint = hasSpecial ? '（注意 ñ/重音符号，无键盘可只输 n/a）' : '';
-        $('type-hint').textContent = `提示：以 "${first}" 开头，共 ${correctKey.length} 个字符 ${specialHint}`;
+        // 明确告诉用户正确答案（不只是给提示），方便学习
+        const hintEl = $('type-hint');
+        hintEl.innerHTML = `正确答案是：<b class="text-green-600 text-lg">${correctKey}</b>${/ñ/i.test(correctKey) ? ' <span class="text-xs text-gray-500">（没西语键盘输 n 也算对）</span>' : ''}`;
         setTimeout(() => {
           input.disabled = false; input.value = ''; input.focus();
           submit.disabled = false;
           submit.classList.remove('btn-danger'); submit.classList.add('btn-primary');
           submit.style.background = '';
-          submit.textContent = '检查'; $('type-hint').textContent = '';
-        }, 1500);
+          submit.textContent = '检查'; hintEl.innerHTML = '';
+        }, 3000);
       }
     };
     submit.addEventListener('click', check);
@@ -3357,7 +3361,9 @@ function bindQuestionEvents(q, correctKey, area) {
       updateSubmit();
     });
     submit.addEventListener('click', () => {
-      const built = result.textContent.trim();
+      // 用瓦片的 data-word 顺序比对，不要用 textContent（flex gap 在 textContent 里不产生分隔符）
+      const builtWords = Array.from(result.querySelectorAll('.order-tile')).map(b => b.textContent);
+      const built = builtWords.join(' ');
       const ok = built === correct;
       submit.disabled = true; clear.disabled = true;
       if (ok) {
