@@ -1841,7 +1841,191 @@ function updateContinueCard() {
 }
 
 // 单元详情/词汇表
-function showUnitDetail(unit) {
+// ==================== 语法学习卡 ====================
+// 给 Unit 1-25（Alita 早期必经）写结构化语法卡
+// 26-50 暂用 tip fallback
+const GRAMMAR_NOTES = {
+  1: {
+    title: '西语 5 个元音',
+    structure: 'a / e / i / o / u',
+    explanation: '西语只有 5 个元音，每个字母**只有一种读法**（不像英语 a 有多种读音）。看到单词就能读出来！',
+    examples: [
+      { es: 'a → casa（房子）', zh: '类似中文「啊」' },
+      { es: 'e → mesa（桌子）', zh: '类似「诶」，嘴稍张' },
+      { es: 'o → boca（嘴）', zh: '类似「哦」，嘴圆' }
+    ],
+    note: '辅音也都基本只有一个读法，西语发音很规则！'
+  },
+  2: {
+    title: '问候与自我介绍',
+    structure: '¡Hola! ¿Cómo estás? ¿Cómo te llamas?',
+    explanation: '西语问候区分**时间段**：Buenos días（早上）/ Buenas tardes（下午）/ Buenas noches（晚上）。问"你叫什么"是 **¿Cómo te llamas?**（字面：你叫什么自己？）',
+    examples: [
+      { es: '¡Hola! ¿Cómo estás?', zh: '你好！你好吗？' },
+      { es: 'Me llamo Ana.', zh: '我叫安娜。' },
+      { es: 'Mucho gusto.', zh: '很高兴认识你。' }
+    ],
+    note: '西语问句必须**前后颠倒**问号（¿...?），感叹句要颠倒感叹号（¡...!）！'
+  },
+  3: {
+    title: '数字 1-100',
+    structure: '1-15 单独记，16+ 是组合',
+    explanation: '1-15 是**独立单词**（uno, dos, tres...）。16-19 是 diez + 6/7/8/9。20 以上是二十/三十/四十 + 数字（veintiuno=20+1）。',
+    examples: [
+      { es: 'dieciséis = 10 + 6 = 16', zh: 'dieciséis 岁' },
+      { es: 'veintiuno = 20 + 1 = 21', zh: 'veintiuno 个苹果' },
+      { es: 'cien = 100', zh: '一百' }
+    ],
+    note: '21 单独写是 veintiuno，但放在名词前要缩写 veintiún（丢掉 o）！'
+  },
+  4: {
+    title: '形容词性数配合',
+    structure: '形容词必须和名词性数一致',
+    explanation: '西语形容词**永远跟名词配**：男单用 rojo，男多用 rojos，女单用 roja，女多用 rojas。阴性形容词通常以 -a 结尾。',
+    examples: [
+      { es: 'el coche rojo（男单）', zh: '红色的车' },
+      { es: 'la casa roja（女单）', zh: '红色的房子' },
+      { es: 'los coches rojos（男复）', zh: '红色的车们' }
+    ],
+    note: '颜色词作形容词最常考：rojo/roja, azul/azul（不变）, verde/verde（不变）'
+  },
+  5: {
+    title: '时间与星期',
+    structure: '¿Qué hora es? + 时间',
+    explanation: '西语星期和月份**不大写**。问"几点了"是 **¿Qué hora es?**。时间用 24 小时制或加 de la mañana/tarde/noche 区分。',
+    examples: [
+      { es: 'Son las tres.', zh: '三点。' },
+      { es: 'Es la una.', zh: '一点。' },
+      { es: 'A las ocho de la mañana.', zh: '早上八点。' }
+    ],
+    note: '1 点用单数 Es la una，2 点以上用复数 Son las dos/tres...！'
+  },
+  6: {
+    title: '家庭成员 + 所有格',
+    structure: 'mi (我的) / tu (你的) / su (他的) + 家人',
+    explanation: '家庭词**男女成对**：padre/madre, hermano/hermana, hijo/ja。所有格 mi/tu/su 放在名词**前面**，对应英文 my/your/his。',
+    examples: [
+      { es: 'Mi familia es grande.', zh: '我的家很大。' },
+      { es: 'Tengo dos hermanos.', zh: '我有两个兄弟。' },
+      { es: 'Tu madre es amable.', zh: '你妈妈很亲切。' }
+    ],
+    note: '家庭称呼前通常**不用**定冠词：mi madre（✓） vs. la mi madre（✗）'
+  },
+  7: {
+    title: '身体部位 + 疼痛表达',
+    structure: 'Me duele + 部位（单数）/ Me duelen + 部位（复数）',
+    explanation: '表达"我哪里疼"用 **Me duele**（它让我疼 → 我觉得它疼）。身体部位通常带定冠词。',
+    examples: [
+      { es: 'Me duele la cabeza.', zh: '我头疼。' },
+      { es: 'Me duelen los pies.', zh: '我脚疼。' },
+      { es: 'Tengo dolor de estómago.', zh: '我胃疼。' }
+    ],
+    note: 'doler 是反向动词：被疼的是主语，加 Me 变成"我被疼"！'
+  },
+  8: {
+    title: '点餐：Quiero + 食物',
+    structure: 'Quiero + 食物（我想要）',
+    explanation: '点餐最常用 **Quiero...**（我想要）。更礼貌用 **Quisiera...**（虚拟式未完成过去时，意为"我想要"但更委婉）。',
+    examples: [
+      { es: 'Quiero un café, por favor.', zh: '我想要一杯咖啡。' },
+      { es: 'Quisiera la paella.', zh: '我想要海鲜饭。' },
+      { es: 'No como carne.', zh: '我不吃肉。' }
+    ],
+    note: '西餐里常用「quisiera...」比「quiero」更礼貌，就像中文"麻烦来一份"'
+  },
+  9: {
+    title: '水果蔬菜 + 性别',
+    structure: 'la manzana / el plátano',
+    explanation: '西语水果蔬菜有**阴阳性**：manzana 🍎 / naranja 🍊 / fresa 🍓 是阴性（la），plátano 🍌 / limón 🍋 / kiwi 🥝 是阳性（el）。',
+    examples: [
+      { es: 'La manzana es roja.', zh: '苹果是红色的。' },
+      { es: 'El plátano es amarillo.', zh: '香蕉是黄色的。' },
+      { es: 'Como una naranja.', zh: '我吃一个橙子。' }
+    ],
+    note: '阴性水果配 la，阳性配 el。-a 结尾通常阴性，-o 结尾通常阳性（除 mano 等例外）'
+  },
+  10: {
+    title: '动物 + 性别',
+    structure: 'el gato / la gata（公猫/母猫）',
+    explanation: '很多动物词**男女词形不同**：gato/gata, perro/perra, león/leona。阴性通常加 -a 或换 -ón → -ona。',
+    examples: [
+      { es: 'el gato（公猫）', zh: '阳性：el gato negro' },
+      { es: 'la gata（母猫）', zh: '阴性：la gata blanca' },
+      { es: 'elefante（不分性别）', zh: '阳性：el elefante grande' }
+    ],
+    note: '有些动物词两性同形（如 elefante, tigre, serpiente），不分公母！'
+  },
+  11: {
+    title: '衣物 + 穿戴动词',
+    structure: 'Llevo + 衣物（我穿/戴）',
+    explanation: '穿戴衣物用 **Llevo**（我穿/戴） + 衣物。脱下用 **Quitarse**。描述颜色/大小放在衣物**后面**。',
+    examples: [
+      { es: 'Llevo una camisa azul.', zh: '我穿一件蓝衬衫。' },
+      { es: 'Quiero comprar un vestido.', zh: '我想买一条裙子。' },
+      { es: 'Me quito los zapatos.', zh: '我脱掉鞋子。' }
+    ],
+    note: 'Llevo 不仅是"穿"，也是"戴"（眼镜/手表/首饰）'
+  },
+  12: {
+    title: '家居物品 + 房间',
+    structure: 'Mi casa tiene + 房间（我家有）',
+    explanation: '家居词很多以 -a 结尾（cocina, sala, mesa）。Mi casa = 我的家，en casa = 在家（**不加冠词**）。',
+    examples: [
+      { es: 'Mi casa es grande.', zh: '我的家很大。' },
+      { es: 'Estoy en casa.', zh: '我在家。' },
+      { es: 'La cocina es moderna.', zh: '厨房很现代。' }
+    ],
+    note: '"在家"用 en casa（无冠词），不是 en la casa'
+  }
+  // Unit 13-50 暂用 tip fallback，后续可继续补充
+};
+
+function showGrammarCard(unit, onStart) {
+  const note = unit.grammarNote || GRAMMAR_NOTES[unit.id] || {
+    title: '本单元小贴士',
+    explanation: unit.tip || '这周我们要学一些新词和表达。',
+    structure: '',
+    examples: [],
+    note: ''
+  };
+  let examplesHtml = (note.examples || []).map(ex =>
+    `<div class="bg-white rounded-xl p-3 mb-2 text-left">
+      <div class="text-base font-bold text-gray-800">${ex.es}</div>
+      <div class="text-sm text-gray-500">${ex.zh}</div>
+    </div>`
+  ).join('');
+  let structureHtml = note.structure ? `
+    <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-3 mb-3 text-center">
+      <div class="text-xs text-gray-500 mb-1">📐 句型结构</div>
+      <div class="font-mono font-bold text-purple-700">${note.structure}</div>
+    </div>
+  ` : '';
+  let noteHtml = note.note ? `
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 rounded-xl p-3 mb-3">
+      <div class="text-xs text-yellow-700 font-bold mb-1">⚠️ 注意</div>
+      <div class="text-sm text-gray-700">${note.note}</div>
+    </div>
+  ` : '';
+  showModal(`
+    <div class="text-center">
+      <div class="text-5xl mb-2">${unit.emoji || '📖'}</div>
+      <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">📖 语法学习卡</div>
+      <h2 class="text-2xl font-bold text-gray-800 mb-3">第 ${unit.id} 单元 · ${note.title || unit.title}</h2>
+      <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-4 mb-3 text-left">
+        <div class="text-xs text-green-700 font-bold mb-1">💡 这周学什么</div>
+        <div class="text-sm text-gray-700 leading-relaxed">${note.explanation}</div>
+      </div>
+      ${structureHtml}
+      ${examplesHtml ? '<div class="text-xs text-gray-500 font-bold mb-2 text-left">📝 例句</div>' + examplesHtml : ''}
+      ${noteHtml}
+      <button id="grammar-card-start" class="w-full btn-primary font-bold py-3 px-6 rounded-2xl mt-2 text-white text-base">
+        我知道了 → 开始答题
+      </button>
+    </div>
+  `);
+  const startBtn = $('grammar-card-start');
+  if (startBtn) startBtn.addEventListener('click', () => { closeModal(); onStart(); });
+}
   const level = unit.level || getUnitLevel(unit.id);
   $('unit-detail-title').innerHTML = `第 ${unit.id} 单元 <span class="text-xs ${LEVEL_COLORS[level]} text-white px-2 py-0.5 rounded align-middle ml-1">${level}</span>`;
   $('unit-detail-subtitle').textContent = `${unit.title} · ${(unit.words || unit.items).length} 词`;
@@ -2840,8 +3024,17 @@ function startLesson(unit, isPractice = false) {
   currentUnitWords = getUnitWords(unit);
   lessonQuestions = generateQuestions(currentUnitWords, isPractice, unit);
   $('lesson-hearts').textContent = state.hearts;
-  showScreen('lesson');
-  renderQuestion();
+  // 已经完成的单元不弹语法卡
+  if (isUnitCompleted(unit.id) && !isPractice) {
+    showScreen('lesson');
+    renderQuestion();
+    return;
+  }
+  // 显示语法卡
+  showGrammarCard(unit, () => {
+    showScreen('lesson');
+    renderQuestion();
+  });
 }
 
 function generateQuestions(words, isPractice, unit) {
