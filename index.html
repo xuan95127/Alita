@@ -3104,8 +3104,9 @@ function renderQuestion() {
         ${q.word.example ? `<div class="text-xs text-gray-400 italic mb-6">"${q.word.example.es}"</div>` : '<div class="mb-6"></div>'}
         <div class="grid grid-cols-1 gap-3">
           ${q.options.map((opt, i) => `
-            <button class="option-btn relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-lg" data-correct="${opt.es === q.word.es}">
-              ${opt.zh}
+            <button class="option-btn relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-lg flex items-center gap-3" data-correct="${opt.es === q.word.es}">
+              <span onclick="event.stopPropagation();speak('${opt.es}')" class="text-2xl opacity-50 hover:opacity-100 cursor-pointer p-1" title="听发音">🔊</span>
+              <span class="flex-1 text-left">${opt.zh}</span>
             </button>
           `).join('')}
         </div>
@@ -3120,9 +3121,9 @@ function renderQuestion() {
         ${q.word.example ? `<div class="text-xs text-gray-400 italic mb-6">"${q.word.example.zh}"</div>` : '<div class="mb-6"></div>'}
         <div class="grid grid-cols-1 gap-3">
           ${q.options.map((opt, i) => `
-            <button class="option-btn relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-lg flex items-center justify-center gap-2" data-correct="${opt.es === q.word.es}">
-              ${opt.es}
-              <span onclick="event.stopPropagation();speak('${opt.es}')" class="text-base opacity-60">🔊</span>
+            <button class="option-btn relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-lg flex items-center gap-3" data-correct="${opt.es === q.word.es}">
+              <span onclick="event.stopPropagation();speak('${opt.es}')" class="text-2xl opacity-50 hover:opacity-100 cursor-pointer p-1" title="听发音">🔊</span>
+              <span class="flex-1 text-left font-bold">${opt.es}</span>
             </button>
           `).join('')}
         </div>
@@ -3137,8 +3138,9 @@ function renderQuestion() {
         <div class="text-xs text-gray-400 mb-6">点击喇叭可重听</div>
         <div class="grid grid-cols-1 gap-3">
           ${q.options.map((opt, i) => `
-            <button class="option-btn relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-lg" data-correct="${opt.es === q.word.es}">
-              ${opt.zh}
+            <button class="option-btn relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-lg flex items-center gap-3" data-correct="${opt.es === q.word.es}">
+              <span onclick="event.stopPropagation();speak('${opt.es}')" class="text-2xl opacity-50 hover:opacity-100 cursor-pointer p-1" title="听发音">🔊</span>
+              <span class="flex-1 text-left">${opt.zh}</span>
             </button>
           `).join('')}
         </div>
@@ -3206,6 +3208,13 @@ function renderQuestion() {
   area.classList.add('bounce-in');
   setTimeout(() => area.classList.remove('bounce-in'), 500);
   bindQuestionEvents(q, correctKey, area);
+  // 选择题进入时：先播题干 + 4 个选项（间隔 1.2s），让用户必听到再选
+  if (q.type === 'choice_es_zh' || q.type === 'choice_zh_es' || q.type === 'listen') {
+    setTimeout(() => speak(q.word.es), 500);
+    q.options.forEach((opt, i) => {
+      setTimeout(() => speak(opt.es), 500 + 1500 * (i + 1));
+    });
+  }
 }
 
 function bindQuestionEvents(q, correctKey, area) {
@@ -3375,6 +3384,10 @@ function bindQuestionEvents(q, correctKey, area) {
     const buttons = area.querySelectorAll('.option-btn');
     buttons.forEach(btn => {
       btn.addEventListener('click', () => {
+        // 选之前先读出该选项（让用户听到自己选了什么）
+        const visible = btn.textContent.replace(/🔊/g, '').trim();
+        const opt = q.options.find(o => o.es === visible || o.zh === visible);
+        if (opt) speak(opt.es);
         buttons.forEach(b => b.disabled = true);
         const ok = btn.dataset.correct === 'true';
         if (ok) {
