@@ -1829,7 +1829,7 @@ function updateContinueCard() {
     $('continue-title').textContent = '所有单元已通关！';
     $('continue-subtitle').textContent = '可以挑战复习巩固';
     btn.textContent = '去复习';
-    btn.onclick = () => startLesson({ id: -1, words: UNITS.flatMap(u => u.words || u.items), title: '综合复习', emoji: '📚', isPractice: true });
+    btn.onclick = () => startReview();
     return;
   }
   $('continue-emoji').textContent = next.emoji;
@@ -3057,12 +3057,25 @@ function generateQuestions(words, isPractice, unit) {
 function collectAllLearnedWords() {
   const seen = new Set();
   const all = [];
+  // 只收集**已学过的**单元词（unitCrowns >= 1，即至少完成过 1 次）
   UNITS.forEach(u => {
-    if (isUnitCompleted(u.id) || isUnitUnlocked(u.id)) {
+    if (isUnitCompleted(u.id)) {
       getUnitWords(u).forEach(w => { if (!seen.has(w.es)) { seen.add(w.es); all.push(w); } });
     }
   });
   return all;
+}
+
+// 综合复习入口
+function startReview() {
+  const learned = collectAllLearnedWords();
+  if (learned.length < 4) {
+    showModal(`<h3 class="text-xl font-bold mb-2">📚 还不能复习</h3><p class="text-gray-600">先学完至少 1 个单元再来复习吧！</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">好的</button>`);
+    return;
+  }
+  // 从已学过的词中抽 12 道题（只用本批词，不混入未学）
+  const reviewUnit = { id: -1, words: learned, title: '综合复习', emoji: '📚', isPractice: true };
+  startLesson(reviewUnit, true);
 }
 
 function renderQuestion() {
