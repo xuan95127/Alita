@@ -3171,7 +3171,7 @@ function renderQuestion() {
         <div class="text-sm text-gray-500 mb-4">把西语和中文配起来</div>
         <div class="grid grid-cols-2 gap-3" id="match-grid">
           <div class="space-y-2" id="match-left">
-            ${leftItems.map((it, i) => `<button data-id="${it.id}" data-side="left" class="match-tile w-full bg-white border-2 border-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-xl">${it.text}</button>`).join('')}
+            ${leftItems.map((it, i) => `<button data-id="${it.id}" data-side="left" class="match-tile w-full bg-white border-2 border-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-xl flex items-center gap-2"><span onclick="event.stopPropagation();speak('${it.id}')" class="text-lg opacity-50 hover:opacity-100 cursor-pointer p-1" title="听发音">🔊</span><span class="flex-1 text-left">${it.text}</span></button>`).join('')}
           </div>
           <div class="space-y-2" id="match-right">
             ${rightItems.map((it, i) => `<button data-id="${it.id}" data-side="right" class="match-tile w-full bg-white border-2 border-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-xl">${it.text}</button>`).join('')}
@@ -3180,6 +3180,8 @@ function renderQuestion() {
         <div id="match-status" class="mt-4 text-sm text-gray-500">点击左右两边的单词进行配对</div>
       </div>
     `;
+    // 自动播读左边的 4 个词
+    setTimeout(() => speak(q.word.es), 500);
   } else if (q.type === 'order') {
     const sentence = q.word.example ? q.word.example.es : q.word.es;
     const words = sentence.split(/\s+/).filter(w => w.length > 0);
