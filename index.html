@@ -3340,13 +3340,20 @@ function bindQuestionEvents(q, correctKey, area) {
         playSound('wrong'); loseHeart();
         area.classList.add('shake');
         setTimeout(() => area.classList.remove('shake'), 400);
-        showModal(`<h3 class="text-xl font-bold mb-2">正确顺序</h3><p class="text-2xl text-gray-800 font-bold mb-2">${correct}</p><p class="text-gray-600">意思是：${q.word.example ? q.word.example.zh : q.word.zh}</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">继续</button>`);
+        // 显示正确答案在 result 区，让用户对比
+        result.innerHTML = `<div class="text-base font-bold text-green-700">✓ 正确: ${correct}</div>`;
+        const zhMeaning = q.word.example ? q.word.example.zh : q.word.zh;
+        const tipEl = document.createElement('div');
+        tipEl.className = 'text-xs text-gray-500 w-full text-center mt-1';
+        tipEl.textContent = `${zhMeaning} · 3秒后可重试`;
+        result.appendChild(tipEl);
+        // 3 秒后清空让用户重试
         setTimeout(() => {
           submit.disabled = false; clear.disabled = false;
           submit.textContent = '检查';
           submit.classList.remove('btn-danger'); submit.classList.add('btn-primary');
           clear.click();
-        }, 2000);
+        }, 3000);
       }
     });
   } else {
