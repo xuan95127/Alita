@@ -135,7 +135,7 @@
       <span class="text-xs text-gray-400">▾</span>
     </button>
     <div class="flex items-center gap-3 text-sm font-bold">
-      <div class="flex items-center gap-1 text-orange-500" title="连胜"><span class="streak-fire">🔥</span><span id="streak">0</span></div>
+      <div class="flex items-center gap-1 text-orange-500" title="连胜"><span id="streak-fire" class="streak-fire">🔥</span><span id="streak">0</span></div>
       <div class="flex items-center gap-1 text-blue-500" title="宝石"><span>💎</span><span id="gems">0</span></div>
       <div class="flex items-center gap-1 text-yellow-600" title="经验"><span>⭐</span><span id="xp">0</span></div>
       <div class="flex items-center gap-1 text-red-500" title="红心"><span>❤️</span><span id="hearts">5</span></div>
@@ -1726,10 +1726,14 @@ $('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') close
 
 function updateTopBar() {
   $('streak').textContent = state.streak;
-  $('streak').className = state.streak >= 30 ? 'streak-fire-huge' : (state.streak >= 7 ? 'streak-fire-big' : 'streak-fire');
+  const fireEl = $('streak-fire');
+  if (fireEl) fireEl.className = state.streak >= 30 ? 'streak-fire-huge' : (state.streak >= 7 ? 'streak-fire-big' : 'streak-fire');
   $('gems').textContent = state.gems;
   $('xp').textContent = state.totalXp;
   $('hearts').textContent = state.hearts;
+  // 心数低时红色加粗提示
+  const heartsEl = $('hearts');
+  if (heartsEl) heartsEl.className = state.hearts <= 1 ? 'text-red-600 font-bold' : '';
 }
 
 function updateDaily() {
