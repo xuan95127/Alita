@@ -3393,16 +3393,33 @@ function bindQuestionEvents(q, correctKey, area) {
         if (ok) {
           btn.classList.add('option-correct');
           playSound('correct'); correctCount++; updateXp(5); flyFromEl(btn);
-          setTimeout(nextQuestion, 1000);
+          setTimeout(nextQuestion, 1200);
         } else {
           btn.classList.add('option-wrong');
           playSound('wrong'); loseHeart();
           area.classList.add('shake');
           setTimeout(() => area.classList.remove('shake'), 400);
-          setTimeout(() => {
-            buttons.forEach(b => { if (b.dataset.correct === 'true') b.classList.add('option-correct'); });
-            setTimeout(nextQuestion, 1500);
-          }, 800);
+          // 找出正确答案并显示
+          const correctBtn = Array.from(buttons).find(b => b.dataset.correct === 'true');
+          if (correctBtn) correctBtn.classList.add('option-correct');
+          // 显示明确的"答错了"提示 + 继续按钮
+          const correctText = correctBtn ? correctBtn.textContent.replace(/🔊/g, '').trim() : '?';
+          const feedbackDiv = document.createElement('div');
+          feedbackDiv.className = 'mt-4 text-center';
+          feedbackDiv.innerHTML = `
+            <div class="text-red-500 font-bold text-lg mb-2">✗ 答错了</div>
+            <div class="text-gray-600 text-sm mb-3">正确答案是：<b class="text-green-600 text-lg">${correctText}</b></div>
+            <button id="wrong-continue" class="btn-primary font-bold py-3 px-8 rounded-2xl text-white text-base">继续 →</button>
+          `;
+          area.appendChild(feedbackDiv);
+          // 播放正确答案的发音
+          setTimeout(() => speak(q.word.es), 600);
+          $('wrong-continue').addEventListener('click', () => {
+            // 移除反馈 UI 但保留选项颜色（绿色正确 + 红色错误）
+            feedbackDiv.remove();
+            // 不重置按钮状态，让用户看到对错再点继续
+            nextQuestion();
+          });
         }
       });
     });
