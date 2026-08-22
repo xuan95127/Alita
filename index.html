@@ -2092,9 +2092,167 @@ const GRAMMAR_NOTES = {
       { es: 'La cocina es moderna.', zh: '厨房很现代。' }
     ],
     note: '"在家"用 en casa（无冠词），不是 en la casa'
-  }
-  // Unit 13-50 暂用 tip fallback，后续可继续补充
+  },
+  13: { title: '问位置：¿Dónde está...?', structure: '¿Dónde está + 地点? → Está + 方位',
+    explanation: '问某个地方在哪，用 **¿Dónde está...?**。回答用 **está**（estar 的第三人称），因为位置是「可变的状态」，所以用 estar 不用 ser。',
+    examples: [ { es: '¿Dónde está el banco?', zh: '银行在哪里？' }, { es: 'Está al lado del parque.', zh: '在公园旁边。' }, { es: 'La farmacia está cerca.', zh: '药店很近。' } ],
+    note: '地点名词前几乎都要带冠词：el banco、la farmacia，不能光说 banco。' },
+  14: { title: '去哪里：ir a + 地点', structure: 'ir a + 地点 ／ ir en + 交通工具',
+    explanation: '**a** 表示「去哪」，**en** 表示「坐什么」。注意 a + el 要缩写成 **al**。走路是唯一例外：a pie。',
+    examples: [ { es: 'Voy al colegio en autobús.', zh: '我坐公交车去学校。' }, { es: 'Vamos a la playa en coche.', zh: '我们开车去海滩。' }, { es: 'Va a casa a pie.', zh: '他走路回家。' } ],
+    note: 'ir 是不规则动词：voy / vas / va / vamos / van，要背下来。' },
+  15: { title: '定冠词 el / la / los / las', structure: '阳性 el·los ／ 阴性 la·las',
+    explanation: '西语名词分阴阳性。**-o 结尾多为阳性**（el libro），**-a 结尾多为阴性**（la mochila）。复数加 -s，冠词也跟着变。',
+    examples: [ { es: 'el libro → los libros', zh: '书 → 书们' }, { es: 'la regla → las reglas', zh: '尺子 → 尺子们' }, { es: 'El profesor explica la lección.', zh: '老师在讲课。' } ],
+    note: '例外要单独记：el día（阳性却是 -a）、la mano（阴性却是 -o）。' },
+  16: { title: '说职业：Soy + 职业', structure: 'Soy / Eres / Es + 职业（不加冠词！）',
+    explanation: '说自己做什么工作，用 **ser** + 职业，而且**不加冠词**。这点和中文、英文都不一样。职业词多数男女成对：-o 变 -a。',
+    examples: [ { es: 'Soy profesor.', zh: '我是老师。（男）' }, { es: 'Mi madre es doctora.', zh: '我妈妈是医生。' }, { es: 'Es ingeniera.', zh: '她是工程师。' } ],
+    note: '想加形容词时才需要冠词：Es una profesora excelente.（她是位出色的老师）' },
+  17: { title: '做运动：jugar a ／ practicar', structure: 'jugar a + 球类 ／ practicar + 运动',
+    explanation: '**球类**运动用 jugar **a**（别漏了 a）；**非球类**（游泳、瑜伽）用 practicar 或专门动词。jugar 变位时 u 会变成 ue。',
+    examples: [ { es: 'Juego al fútbol los sábados.', zh: '我周六踢足球。' }, { es: 'Practico natación.', zh: '我练游泳。' }, { es: 'Jugamos al tenis.', zh: '我们打网球。' } ],
+    note: 'jugar 是 u→ue 变位：juego / juegas / juega / jugamos / juegan。' },
+  18: { title: '说喜欢：gustar 是反过来的', structure: 'Me gusta + 单数／原形　Me gustan + 复数',
+    explanation: 'gustar 的字面意思是「让…喜欢」，所以**主语是被喜欢的东西**。喜欢一样东西用 gusta，喜欢多样用 **gustan**。这是西语最容易错的一个点。',
+    examples: [ { es: 'Me gusta la música.', zh: '我喜欢音乐。（一样）' }, { es: 'Me gustan los libros.', zh: '我喜欢书。（多样）' }, { es: 'Me gusta leer.', zh: '我喜欢读书。（动词原形算单数）' } ],
+    note: '别说 Yo gusto música ——那意思变成「我让音乐喜欢」了。' },
+  19: { title: '形容词放名词后面', structure: '名词 + 形容词（性数都要跟着变）',
+    explanation: '和中文相反，西语形容词**放在名词后面**，而且要跟名词的**阴阳性**和**单复数**一致。-e 或辅音结尾的形容词阴阳同形。',
+    examples: [ { es: 'una casa grande', zh: '一栋大房子' }, { es: 'los coches rojos', zh: '红色的车们' }, { es: 'las flores bonitas', zh: '漂亮的花们' } ],
+    note: 'verde、grande、fácil 这类不分阴阳，但复数照样加 -s。' },
+  20: { title: '说天气：Hace ／ Está ／ Hay', structure: 'Hace + 名词　Está + 形容词　Hay + 名词',
+    explanation: '天气有三种说法：**Hace** 接名词（calor 热、frío 冷、sol 太阳）；**Está** 接形容词（nublado 多云）；**Hay** 表示「有」（niebla 雾）。',
+    examples: [ { es: 'Hace mucho calor.', zh: '天很热。' }, { es: 'Está nublado.', zh: '天阴。' }, { es: 'Hay niebla.', zh: '有雾。' } ],
+    note: '别把 Hace calor 说成 Es calor ——天气固定用 hacer。' },
+  21: { title: '动词现在时变位', structure: '-ar → o/as/a/amos/an',
+    explanation: '西语动词按主语换尾巴。三类原形 **-ar / -er / -ir**，规则变位各有一套。掌握 -ar 就能说一大半日常句。',
+    examples: [ { es: 'hablar → hablo, hablas, habla', zh: '说：我说/你说/他说' }, { es: 'comer → como, comes, come', zh: '吃：我吃/你吃/他吃' }, { es: 'vivir → vivo, vives, vive', zh: '住：我住/你住/他住' } ],
+    note: '因为词尾已经告诉你是谁，主语 yo / tú 平时都省略。' },
+  22: { title: 'por 还是 para？', structure: 'por = 原因／经过　para = 目的／对象',
+    explanation: '两个都能翻成「为」，但方向相反：**por** 看向后（因为、通过），**para** 看向前（为了、给谁）。',
+    examples: [ { es: 'Gracias por tu ayuda.', zh: '谢谢你的帮助。（原因）' }, { es: 'Este regalo es para ti.', zh: '这个礼物给你。（对象）' }, { es: 'Estudio para aprender.', zh: '我学习是为了学会。（目的）' } ],
+    note: '记法：**para** 有个「往前」的箭头（目的），**por** 是「回头看」（原因）。' },
+  23: { title: 'ser 还是 estar？', structure: 'ser = 本质／estar = 状态',
+    explanation: '两个都是「是」。**ser** 说本质（性格、职业、国籍），**estar** 说此刻的状态（心情、位置）。同一个形容词换动词，意思会变。',
+    examples: [ { es: 'Es alegre.', zh: '他性格开朗。（本质）' }, { es: 'Está alegre.', zh: '他今天很开心。（此刻）' }, { es: 'Estoy cansado.', zh: '我累了。（状态）' } ],
+    note: 'Es aburrido = 他很无趣；Está aburrido = 他觉得无聊。差别很大！' },
+  24: { title: '日期怎么说', structure: 'el + 数字 + de + 月份',
+    explanation: '西语日期用**基数词**（uno, dos...），不用序数词，只有 1 号例外用 primero。顺序是「日 de 月 de 年」，和中文相反。',
+    examples: [ { es: 'el primero de mayo', zh: '五月一号' }, { es: 'el veinticinco de diciembre', zh: '十二月二十五号' }, { es: 'Mi cumpleaños es el diez de junio.', zh: '我生日是六月十号。' } ],
+    note: '月份**不大写**：enero, febrero…（英语才大写）。' },
+  25: { title: 'tener 短语：我饿了/冷了', structure: 'tener + 名词（不是 estar + 形容词）',
+    explanation: '中文说「我很饿」，西语说「我**有**饥饿」——用 **tener**。这类固定搭配必须整个记住，不能照中文直译。',
+    examples: [ { es: 'Tengo hambre.', zh: '我饿了。' }, { es: 'Tengo frío.', zh: '我冷。' }, { es: 'Tengo diez años.', zh: '我十岁。（年龄也用 tener！）' } ],
+    note: '说 Soy diez años 是错的，年龄永远用 tener。' },
+  26: { title: '近将来：ir a + 原形', structure: 'voy a / vas a / va a + 动词原形',
+    explanation: '要表达「就要做某事」，用 **ir a + 动词原形**，比将来时更常用、更口语。相当于英语的 be going to。',
+    examples: [ { es: 'Voy a viajar mañana.', zh: '我明天要去旅行。' }, { es: 'Vamos a abordar.', zh: '我们要登机了。' }, { es: '¿Vas a comer?', zh: '你要吃饭吗？' } ],
+    note: '中间的 a 不能省：Voy viajar 是错的。' },
+  27: { title: '礼貌称呼 usted', structure: 'tú（朋友）→ usted（长辈／陌生人）',
+    explanation: '对不熟的人或长辈要用 **usted**，动词跟着用**第三人称**形式。酒店、餐厅、问路场景都该用 usted。',
+    examples: [ { es: '¿Cómo está usted?', zh: '您好吗？' }, { es: '¿Tiene una habitación?', zh: '您有房间吗？' }, { es: 'Muestre su pasaporte.', zh: '请出示您的护照。' } ],
+    note: 'usted 的动词形式和「他/她」一样：usted tiene = él tiene。' },
+  28: { title: '点餐更礼貌：Quisiera', structure: 'Quisiera / Me gustaría + 名词或原形',
+    explanation: 'Quiero（我要）有点直接。餐厅里用 **Quisiera** 或 **Me gustaría**（我想要…）更得体，相当于中文的「我想要…，麻烦了」。',
+    examples: [ { es: 'Quisiera una paella, por favor.', zh: '我想要一份海鲜饭，谢谢。' }, { es: 'Me gustaría ver el menú.', zh: '我想看一下菜单。' }, { es: '¿Me trae la cuenta?', zh: '能给我账单吗？' } ],
+    note: '句尾加 por favor，几乎万能。' },
+  29: { title: '指路用命令式', structure: 'tú 命令式 = 去掉 -r 变第三人称形',
+    explanation: '给人指路要用**命令式**。规则动词的 tú 肯定命令，形式和「他/她」的现在时一样：girar→gira，seguir→sigue。',
+    examples: [ { es: 'Sigue recto.', zh: '一直往前走。' }, { es: 'Gira a la derecha.', zh: '向右拐。' }, { es: 'Cruza la calle.', zh: '过马路。' } ],
+    note: '对陌生人用 usted 命令式：Siga recto、Gire a la derecha。' },
+  30: { title: '说哪里疼：me duele', structure: 'me duele + 单数部位　me duelen + 复数',
+    explanation: 'doler 和 gustar 一样是「反过来」的动词：**疼的部位才是主语**。一个部位用 duele，多个用 **duelen**。部位前用冠词，不用「我的」。',
+    examples: [ { es: 'Me duele la cabeza.', zh: '我头疼。' }, { es: 'Me duelen los pies.', zh: '我脚疼。（复数）' }, { es: '¿Te duele mucho?', zh: '你很疼吗？' } ],
+    note: '说 Me duele mi cabeza 是多余的，西语里用 la 就够了。' },
+  31: { title: '现在完成时', structure: 'he / has / ha + 过去分词',
+    explanation: '表示「已经做过」且和现在有关。构成是 **haber + 过去分词**（-ar→-ado，-er/-ir→-ido）。过去分词**不随性数变化**。',
+    examples: [ { es: 'He trabajado aquí dos años.', zh: '我在这儿工作了两年。' }, { es: '¿Has firmado el contrato?', zh: '你签合同了吗？' }, { es: 'Ha enviado su currículum.', zh: '他投了简历。' } ],
+    note: '不规则分词要记：hacer→hecho，ver→visto，escribir→escrito。' },
+  32: { title: '简单过去时（做完了）', structure: '-ar → é/aste/ó　-er·-ir → í/iste/ió',
+    explanation: '**pretérito** 讲一件「已经结束」的事，有明确时间点。考试、毕业、昨天做了什么，都用它。',
+    examples: [ { es: 'Estudié toda la noche.', zh: '我学了一整夜。' }, { es: 'Aprobé el examen.', zh: '我考试及格了。' }, { es: 'Recibí una beca.', zh: '我拿到了奖学金。' } ],
+    note: '第一人称和第三人称的重音位置不同：estudié（我）vs estudió（他）。' },
+  33: { title: '宾语代词 lo / la / los / las', structure: '代词放在**变位动词前面**',
+    explanation: '为了不重复名词，用 lo（阳单）/ la（阴单）/ los / las 代替。位置和英语不同：要放在**动词前**。',
+    examples: [ { es: '¿La contraseña? No la recuerdo.', zh: '密码？我不记得了。' }, { es: 'Descargué la app y la uso mucho.', zh: '我下载了这个应用，经常用它。' }, { es: 'Los mensajes: los leo por la noche.', zh: '消息我晚上看。' } ],
+    note: '接原形或命令式时才挂在后面：Voy a leerlo. / Léelo.' },
+  34: { title: '该做什么：hay que ／ deber', structure: 'Hay que + 原形（泛指）　Debo + 原形（具体谁）',
+    explanation: '**Hay que** 说「（大家）应该」，不指明谁；**deber** 变位后指明是谁该做。环保话题里两个都高频。',
+    examples: [ { es: 'Hay que reciclar la basura.', zh: '垃圾应该回收。' }, { es: 'Debemos ahorrar agua.', zh: '我们应该节约用水。' }, { es: 'No debes tirar basura.', zh: '你不该乱扔垃圾。' } ],
+    note: 'Hay que 后面永远是原形，不变位。' },
+  35: { title: '被动式：ser + 过去分词', structure: 'ser + 分词（分词要跟主语性数一致）',
+    explanation: '介绍作品、作者时常用被动。注意这里的**过去分词要配合主语的阴阳性和单复数**，和现在完成时不一样。',
+    examples: [ { es: 'La obra fue escrita por Cervantes.', zh: '这部作品是塞万提斯写的。' }, { es: 'El cuadro fue pintado en 1937.', zh: '这幅画画于 1937 年。' }, { es: 'Las canciones son cantadas en español.', zh: '这些歌是用西语唱的。' } ],
+    note: '口语里更常用 se：Aquí se habla español.（这里说西语）' },
+  36: { title: '看法：creo que ／ no creo que', structure: '肯定 → 陈述式　否定 → 虚拟式',
+    explanation: '这是西语的一个大坑：**Creo que** 后面用普通陈述式，但 **No creo que** 后面必须换成**虚拟式**，因为否定带来了不确定。',
+    examples: [ { es: 'Creo que es verdad.', zh: '我认为这是真的。' }, { es: 'No creo que sea verdad.', zh: '我不认为这是真的。（sea 虚拟式）' }, { es: 'En mi opinión, tienes razón.', zh: '在我看来，你说得对。' } ],
+    note: '同理：Es verdad que viene（陈述）／ No es verdad que venga（虚拟）。' },
+  37: { title: '未完成过去时', structure: '-ar → aba　-er·-ir → ía',
+    explanation: '**imperfecto** 描述过去的「背景、习惯、正在进行」，不强调结束。新闻和故事里常和简单过去时搭配：背景用 imperfecto，事件用 pretérito。',
+    examples: [ { es: 'Antes leía el periódico cada día.', zh: '以前我每天看报。（习惯）' }, { es: 'Llovía cuando salí.', zh: '我出门时正在下雨。' }, { es: 'El programa era muy popular.', zh: '那个节目当时很红。' } ],
+    note: '只有三个不规则：ser→era，ir→iba，ver→veía。' },
+  38: { title: '心情：estar ／ sentirse ／ tener', structure: 'estar + 形容词　sentirse + 形容词　tener + 名词',
+    explanation: '说心情有三条路：**estar** 最常用；**sentirse**（感到）更强调主观感受；有些情绪固定用 **tener** + 名词。',
+    examples: [ { es: 'Estoy nervioso.', zh: '我很紧张。' }, { es: 'Me siento triste.', zh: '我感到难过。' }, { es: 'Tengo miedo.', zh: '我害怕。' } ],
+    note: 'sentirse 是反身动词：me siento / te sientes / se siente。' },
+  39: { title: '比较：más / menos ... que', structure: 'más + 形容词 + que（比…更）',
+    explanation: '比较用 **más...que**（更）和 **menos...que**（更少）。「和…一样」用 tan...como。买东西讨价还价全靠它。',
+    examples: [ { es: 'Este es más caro que aquel.', zh: '这个比那个贵。' }, { es: 'Es menos caro de lo que pensaba.', zh: '比我想的便宜。' }, { es: 'Es tan barato como ayer.', zh: '和昨天一样便宜。' } ],
+    note: '四个不规则比较级：bueno→mejor，malo→peor，grande→mayor，pequeño→menor。' },
+  40: { title: '反身动词', structure: 'me / te / se + 动词（动作回到自己身上）',
+    explanation: '动作作用在自己身上时用反身代词。节日场景里很多：打扮、聚在一起、玩得开心。原形写作 -se 结尾（levantarse）。',
+    examples: [ { es: 'Nos disfrazamos en Halloween.', zh: '万圣节我们化装打扮。' }, { es: 'La familia se reúne en Navidad.', zh: '圣诞节全家聚在一起。' }, { es: 'Me levanto temprano.', zh: '我起得早。' } ],
+    note: '代词要跟着主语变：me / te / se / nos / se。' },
+  41: { title: 'lo + 形容词 = 抽象名词', structure: 'lo + 形容词 → 「…的那一面/事情」',
+    explanation: '**lo** 加形容词，能把形容词变成抽象概念，是 B2 表达的标志性结构。中文常译成「…的地方」「…的是」。',
+    examples: [ { es: 'Lo importante es intentarlo.', zh: '重要的是去尝试。' }, { es: 'Lo difícil fue empezar.', zh: '难的是开始。' }, { es: 'Eso es lo mejor.', zh: '那是最好的。' } ],
+    note: 'lo 后面的形容词永远用**阳性单数**，不变。' },
+  42: { title: 'es + 形容词 + que + 虚拟式', structure: 'Es importante que + 虚拟式',
+    explanation: '评价一件事该不该、重不重要时，从句要用**虚拟式**。这是讨论社会议题的核心句型。',
+    examples: [ { es: 'Es importante que votemos.', zh: '我们投票很重要。' }, { es: 'Es necesario que todos participen.', zh: '所有人都参与是必要的。' }, { es: 'Es una pena que haya pobreza.', zh: '有贫困是件憾事。' } ],
+    note: '但 Es verdad que / Es evidente que 例外，后面用陈述式。' },
+  43: { title: '条件句（真实条件）', structure: 'Si + 现在时, 现在时／将来时',
+    explanation: '讨论「如果…就…」这种**可能发生**的情况，si 后面用**现在时**，主句用现在时或将来时。注意：si 后面**永远不用**将来时。',
+    examples: [ { es: 'Si buscas, encuentras.', zh: '你找，就能找到。' }, { es: 'Si estudias, aprobarás.', zh: '你学习的话就会及格。' }, { es: 'Si dudas, pregunta.', zh: '有疑问就问。' } ],
+    note: '说 Si estudiarás 是错的 —— si 后面不能跟将来时。' },
+  44: { title: '虚拟式现在时', structure: '把现在时词尾「对调」：-ar→e，-er·-ir→a',
+    explanation: '虚拟式表达**愿望、怀疑、情感、要求**这些主观态度。构成：拿 yo 的现在时，去掉 -o，-ar 动词加 e 类词尾，-er/-ir 加 a 类。',
+    examples: [ { es: 'Ojalá que vengas.', zh: '但愿你能来。' }, { es: 'Quiero que estudies.', zh: '我希望你学习。' }, { es: 'Espero que estés bien.', zh: '希望你一切都好。' } ],
+    note: '主从句主语**不同**才用虚拟式；同一个人就直接用原形：Quiero estudiar.' },
+  45: { title: 'cuando + 虚拟式（讲将来）', structure: '讲已发生 → 陈述式；讲还没发生 → 虚拟式',
+    explanation: 'cuando 讲**已经/经常**发生的事用陈述式；讲**还没发生**的将来，必须用虚拟式。这是 B1 的分水岭。',
+    examples: [ { es: 'Cuando llego, siempre llamo.', zh: '我一到就打电话。（习惯）' }, { es: 'Cuando llegues, llámame.', zh: '你到了就给我打电话。（将来）' }, { es: 'Aunque llueva, saldré.', zh: '就算下雨我也要出去。' } ],
+    note: 'hasta que、antes de que、en cuanto 也是同一套规则。' },
+  46: { title: '习语不能直译', structure: '整条记住，别拆开翻',
+    explanation: '习语的字面意思和真实意思常常毫无关系。**必须整条背下来**，靠语境理解，拆字翻译一定出错。',
+    examples: [ { es: 'Vamos al grano.', zh: '咱们开门见山。（字面：去谷粒）' }, { es: 'Metí la pata.', zh: '我说错话了。（字面：把爪子伸进去）' }, { es: 'Cuesta un ojo de la cara.', zh: '贵得要命。（字面：值一只眼睛）' } ],
+    note: '遇到看不懂但每个词都认识的句子，多半是习语。' },
+  47: { title: '叙事的两种过去时', structure: 'imperfecto 画背景，pretérito 推情节',
+    explanation: '读小说时抓住这条线：**未完成过去时**描写环境、天气、人物状态；**简单过去时**讲一个个发生的动作。两者交替就是故事的节奏。',
+    examples: [ { es: 'Era de noche y llovía.', zh: '当时是夜里，正下着雨。（背景）' }, { es: 'De repente, alguien llamó.', zh: '突然，有人敲门。（事件）' }, { es: 'El narrador contaba la historia.', zh: '叙述者讲着这个故事。' } ],
+    note: '背景用 era/estaba/había，事件用 llegó/dijo/vio。' },
+  48: { title: '讲历史用简单过去时', structure: 'En + 年份, 主语 + pretérito',
+    explanation: '叙述历史事件，用**简单过去时**，因为都是完成了的、有确切时间的事。年份直接读数字，不加 en el。',
+    examples: [ { es: 'En 1492, Colón llegó a América.', zh: '1492 年，哥伦布到达美洲。' }, { es: 'El imperio romano cayó en el 476.', zh: '罗马帝国在 476 年覆灭。' }, { es: 'La guerra terminó en 1939.', zh: '战争在 1939 年结束。' } ],
+    note: '世纪用罗马数字：el siglo XX 读作 el siglo veinte。' },
+  49: { title: '将来时', structure: '动词原形 + é/ás/á/emos/án',
+    explanation: '将来时最简单：**直接在原形后加词尾**，三类动词共用一套。谈科技和未来时最常用。',
+    examples: [ { es: 'La tecnología cambiará el mundo.', zh: '技术将改变世界。' }, { es: 'Los robots trabajarán con nosotros.', zh: '机器人将和我们一起工作。' }, { es: '¿Qué pasará en el futuro?', zh: '未来会发生什么？' } ],
+    note: '少数动词词干不规则：tener→tendré，hacer→haré，poder→podré。' },
+  50: { title: '假设：Si fuera... , ...ría', structure: 'Si + 虚拟式过去, 条件式',
+    explanation: 'B2 的标志句型：谈**不现实或不太可能**的假设。si 从句用虚拟式过去（-ra 形），主句用条件式（原形 + ía）。',
+    examples: [ { es: 'Si fuera rico, viajaría por el mundo.', zh: '如果我有钱，我就环游世界。' }, { es: 'Si tuviera tiempo, aprendería piano.', zh: '要是有时间，我就去学钢琴。' }, { es: 'Me gustaría lograrlo.', zh: '我很想做到。' } ],
+    note: '和 U43 的真实条件句区分：那个讲可能发生，这个讲做不到的假设。' }
 };
+
+// 语法卡文案里的 **加粗** 要真的加粗（之前直接显示成星号）
+function mdBold(t) {
+  return String(t == null ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*([^*]+)\*\*/g, '<b class="text-gray-900">$1</b>');
+}
 
 function showGrammarCard(unit, onStart) {
   const note = unit.grammarNote || GRAMMAR_NOTES[unit.id] || {
@@ -2113,13 +2271,13 @@ function showGrammarCard(unit, onStart) {
   let structureHtml = note.structure ? `
     <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-3 mb-3 text-center">
       <div class="text-xs text-gray-500 mb-1">📐 句型结构</div>
-      <div class="font-mono font-bold text-purple-700">${note.structure}</div>
+      <div class="font-mono font-bold text-purple-700">${mdBold(note.structure)}</div>
     </div>
   ` : '';
   let noteHtml = note.note ? `
     <div class="bg-yellow-50 border-l-4 border-yellow-400 rounded-xl p-3 mb-3">
       <div class="text-xs text-yellow-700 font-bold mb-1">⚠️ 注意</div>
-      <div class="text-sm text-gray-700">${note.note}</div>
+      <div class="text-sm text-gray-700">${mdBold(note.note)}</div>
     </div>
   ` : '';
   showModal(`
@@ -2129,7 +2287,7 @@ function showGrammarCard(unit, onStart) {
       <h2 class="text-2xl font-bold text-gray-800 mb-3">第 ${unit.id} 单元 · ${note.title || unit.title}</h2>
       <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-4 mb-3 text-left">
         <div class="text-xs text-green-700 font-bold mb-1">💡 这周学什么</div>
-        <div class="text-sm text-gray-700 leading-relaxed">${note.explanation}</div>
+        <div class="text-sm text-gray-700 leading-relaxed">${mdBold(note.explanation)}</div>
       </div>
       ${structureHtml}
       ${examplesHtml ? '<div class="text-xs text-gray-500 font-bold mb-2 text-left">📝 例句</div>' + examplesHtml : ''}
