@@ -16,3 +16,4 @@ show-*.js
 test-*.js
 server.js
 .claude/
+node_modules/

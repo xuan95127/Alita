@@ -1,0 +1,10 @@
+{
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  },
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i tailwind.src.css -o tailwind.css --minify"
+  },
+  "name": "mini-espanol",
+  "private": true
+}

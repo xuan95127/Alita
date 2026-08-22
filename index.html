@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%2358CC02'/%3E%3Ctext x='96' y='130' font-size='100' text-anchor='middle'%3E%F0%9F%A6%89%3C/text%3E%3C/svg%3E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>🦉 Mini Español - 小小西语</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="./tailwind.css?v=1">
 <style>
   :root {
     --duo-green: #58CC02;
@@ -125,21 +125,50 @@
     100% { transform: scale(1); box-shadow: 0 0 0 24px rgba(59, 130, 246, 0); }
   }
 
+  /* 有新版本时从顶部滑下来的提示条 */
+  #update-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 60;
+    background: var(--duo-blue); color: #fff;
+    padding: 10px 16px calc(10px + env(safe-area-inset-top, 0px));
+    display: flex; align-items: center; gap: 12px; justify-content: center;
+    font-weight: 700; font-size: 14px; box-shadow: 0 2px 12px rgba(0,0,0,.2);
+    animation: slide-down 0.3s ease-out;
+  }
+  #update-bar button {
+    background: #fff; color: var(--duo-blue); padding: 5px 14px;
+    border-radius: 999px; font-weight: 800; font-size: 13px;
+  }
+
+  /* 首页功能卡：白底 + 彩色图标块，取代原来清一色的绿 */
+  .home-card {
+    background: #fff; border: 2px solid #e9e9e9; border-radius: 16px;
+    padding: 14px; text-align: left; box-shadow: 0 2px 0 #e9e9e9;
+    transition: transform 0.1s, border-color 0.1s;
+  }
+  .home-card:active { transform: translateY(2px); box-shadow: 0 0 0 #e9e9e9; }
+  .home-card-icon {
+    width: 42px; height: 42px; border-radius: 12px; font-size: 22px;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 8px;
+  }
+
   /* 学习路径节点连接线（蛇形） */
   .path-row { position: relative; }
   .path-row::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background-image: linear-gradient(to right, #58CC02 50%, transparent 50%);
-    background-size: 16px 4px;
-    background-repeat: repeat-x;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 26px;
+    background-image: linear-gradient(to bottom, #d4d4d4 55%, transparent 55%);
+    background-size: 4px 12px;
+    background-repeat: repeat-y;
+    border-radius: 2px;
     z-index: 0;
   }
   .path-row:first-child::before { display: none; }
+  .path-row.path-done::before { background-image: linear-gradient(to bottom, #58CC02 55%, transparent 55%); }
   .path-row .unit-circle { position: relative; z-index: 1; }
   /* iPad 横屏适配：小屏不显示昵称，统计 flex-shrink */
   @media (max-width: 640px) {
@@ -273,28 +302,28 @@
 
     <!-- 4 宫格功能区 -->
     <div class="grid grid-cols-2 gap-3 mb-6">
-      <button id="open-pronunciation" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition relative">
-        <span class="absolute top-2 right-2 bg-white text-green-600 text-xs px-2 py-0.5 rounded-full font-bold">推荐</span>
-        <div class="text-3xl mb-2">🗣️</div>
+      <button id="open-pronunciation" class="home-card relative">
+        <span class="absolute top-2 right-2 bg-purple-100 text-purple-600 text-[10px] px-2 py-0.5 rounded-full font-bold">推荐</span>
+        <div class="home-card-icon" style="background:#CE82FF1a;color:#CE82FF">🗣️</div>
         <div class="font-bold text-gray-800 text-sm">发音练习</div>
-        <div class="text-xs text-gray-600">从字母开始</div>
+        <div class="text-xs text-gray-500">从字母开始</div>
       </button>
-      <button id="start-practice" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition">
-        <div class="text-3xl mb-2">📚</div>
+      <button id="start-practice" class="home-card">
+        <div class="home-card-icon" style="background:#FF96001a;color:#FF9600">📚</div>
         <div class="font-bold text-gray-800 text-sm">复习旧词</div>
-        <div class="text-xs text-gray-600">巩固记忆</div>
+        <div class="text-xs text-gray-500">巩固记忆</div>
       </button>
-      <button id="open-stories" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition">
-        <div class="text-3xl mb-2">📖</div>
+      <button id="open-stories" class="home-card">
+        <div class="home-card-icon" style="background:#1CB0F61a;color:#1CB0F6">📖</div>
         <div class="font-bold text-gray-800 text-sm">西语故事</div>
-        <div class="text-xs text-gray-600" id="home-stories-count">— 个 · 加载中</div>
-        <div class="text-[10px] text-gray-700 mt-1 font-bold" id="home-stories-progress"></div>
+        <div class="text-xs text-gray-500" id="home-stories-count">— 个 · 加载中</div>
+        <div class="text-[10px] mt-1 font-bold" style="color:#1CB0F6" id="home-stories-progress"></div>
       </button>
-      <button id="open-conversations" class="gradient-card rounded-2xl p-4 shadow-lg border-2 border-green-300 text-left active:scale-95 transition">
-        <div class="text-3xl mb-2">💬</div>
+      <button id="open-conversations" class="home-card">
+        <div class="home-card-icon" style="background:#00CD9C1a;color:#00CD9C">💬</div>
         <div class="font-bold text-gray-800 text-sm">情景对话</div>
-        <div class="text-xs text-gray-600" id="home-convs-count">— 个场景</div>
-        <div class="text-[10px] text-gray-700 mt-1 font-bold" id="home-convs-progress"></div>
+        <div class="text-xs text-gray-500" id="home-convs-count">— 个场景</div>
+        <div class="text-[10px] mt-1 font-bold" style="color:#00CD9C" id="home-convs-progress"></div>
       </button>
     </div>
 
@@ -548,7 +577,7 @@
         <div class="font-bold text-gray-800 text-base">错题本</div>
         <div class="text-xs text-gray-500"><span id="wrong-count">0</span> 道错题待复习</div>
       </div>
-      <button onclick="startReview()" class="bg-green-500 text-white px-4 py-2 rounded-xl font-bold text-sm">复习</button>
+      <button onclick="openWrongBook()" class="bg-green-500 text-white px-4 py-2 rounded-xl font-bold text-sm">查看</button>
     </div>
     <div class="bg-white rounded-3xl p-5 shadow-sm mb-4 flex items-center gap-4">
       <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-2xl flex-shrink-0">💾</div>
@@ -604,7 +633,8 @@
         <div class="text-xs text-gray-500" id="review-progress">0 / 0</div>
       </div>
     </div>
-    <div id="review-content" class="bg-white rounded-2xl p-6 shadow-lg min-h-[450px]"></div>
+    <div id="review-content" class="bg-white rounded-2xl p-4 shadow-lg min-h-[420px]"></div>
+    <div id="review-actions" class="mt-4"></div>
   </section>
 </main>
 
@@ -1649,30 +1679,41 @@ function updatePKCard() {
   const snapshots = family.profiles.map(p => getProfileSnapshot(p.id));
   // 排序：本周 XP 多的排前面
   snapshots.sort((a, b) => b.weeklyXp - a.weeklyXp);
+
+  const top = snapshots[0].weeklyXp;
+  // 并列第一可能不止两个人 —— 原来只比 [0] 和 [1]，三个人以上就判错
+  const leaders = snapshots.filter(s => s.weeklyXp === top && top > 0);
+  const allZero = top === 0;
+
   grid.innerHTML = '';
-  snapshots.forEach((s, idx) => {
-    const isLeader = idx === 0 && s.weeklyXp > 0;
-    const isTie = snapshots[0].weeklyXp === snapshots[1].weeklyXp;
+  // 3 个人以上时每行放 3 格，两个人还是并排
+  grid.className = snapshots.length > 2 ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-2 gap-3';
+  snapshots.forEach(s => {
+    const isLeader = !allZero && s.weeklyXp === top;   // 并列的每个人都戴皇冠
     const cell = document.createElement('div');
     cell.className = `text-center p-3 rounded-xl ${isLeader ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-orange-300' : 'bg-gray-50'}`;
     cell.innerHTML = `
-      <div class="text-3xl">${s.avatar}</div>
-      <div class="font-bold text-sm text-gray-800 mt-1">${s.name}</div>
+      <div class="text-3xl">${s.avatar}${isLeader ? '<span class="text-base align-top">👑</span>' : ''}</div>
+      <div class="font-bold text-sm text-gray-800 mt-1 truncate">${s.name}</div>
       <div class="text-2xl font-bold mt-1 ${isLeader ? 'text-orange-500' : 'text-gray-600'}">${s.weeklyXp}</div>
       <div class="text-xs text-gray-500">本周 XP</div>
     `;
     grid.appendChild(cell);
   });
-  // 领奖文案
+
   const leader = $('pk-leader');
-  if (snapshots[0].weeklyXp === 0 && snapshots[1].weeklyXp === 0) {
+  if (allZero) {
     leader.textContent = '本周还没开始，加油！💪';
     leader.className = 'text-center mt-3 text-sm font-bold text-gray-500';
-  } else if (snapshots[0].weeklyXp === snapshots[1].weeklyXp) {
-    leader.textContent = '🤝 并列第一！';
+  } else if (leaders.length > 1) {
+    const names = leaders.map(s => s.name);
+    const joined = names.length > 2 ? names.slice(0, -1).join('、') + ' 和 ' + names[names.length - 1] : names.join(' 和 ');
+    leader.textContent = `🤝 ${joined} 并列第一！`;
     leader.className = 'text-center mt-3 text-sm font-bold text-blue-500';
   } else {
-    const diff = snapshots[0].weeklyXp - snapshots[1].weeklyXp;
+    // 领先多少，要跟"第二名"比，而不是跟数组里的下一个比
+    const runnerUp = snapshots.find(s => s.weeklyXp < top);
+    const diff = top - (runnerUp ? runnerUp.weeklyXp : 0);
     leader.textContent = `👑 ${snapshots[0].name} 领先 ${diff} XP`;
     leader.className = 'text-center mt-3 text-sm font-bold text-orange-500';
   }
@@ -2167,6 +2208,7 @@ function showScreen(name) {
   if (name === 'learn') renderHome();
   if (name === 'quests') renderQuests();
   if (name === 'profile') renderProfile();
+  if (name === 'review') renderWrongBook();
   if (name === 'settings') {
     $('setting-sound').checked = state.soundOn !== false;
     updateVoiceButtons();
@@ -3064,6 +3106,8 @@ function renderQuests() {
 }
 
 function renderProfile() {
+  const wrongEl = $('wrong-count');
+  if (wrongEl) wrongEl.textContent = (state.wrongAnswers || []).length;
   $('profile-level').textContent = Math.floor(state.totalXp / 100) + 1;
   $('profile-xp').textContent = state.totalXp % 100;
   $('profile-streak').textContent = state.streak;
@@ -3213,6 +3257,56 @@ function collectAllLearnedWords() {
   return all;
 }
 
+// ==================== 错题本 ====================
+function openWrongBook() {
+  showScreen('review');
+  renderWrongBook();
+}
+
+function renderWrongBook() {
+  const list = Array.isArray(state.wrongAnswers) ? state.wrongAnswers.slice() : [];
+  // 错得多的排前面，同样多的按最近错的排
+  list.sort((a, b) => (b.count || 1) - (a.count || 1) || (b.date || 0) - (a.date || 0));
+  $('review-progress').textContent = list.length ? `${list.length} 个词待攻克` : '暂时没有错题';
+  const box = $('review-content'), actions = $('review-actions');
+
+  if (!list.length) {
+    box.innerHTML = `
+      <div class="text-center py-16">
+        <div class="text-6xl mb-3">🎉</div>
+        <div class="font-bold text-gray-800 text-lg mb-1">错题本是空的！</div>
+        <div class="text-sm text-gray-500">做题答错的词会自动收进来，<br>练会了就自动消失</div>
+      </div>`;
+    actions.innerHTML = '';
+    return;
+  }
+
+  box.innerHTML = list.map(w => {
+    const times = w.count || 1;
+    const heat = times >= 3 ? 'bg-red-50 border-red-200' : times === 2 ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200';
+    return `
+      <div class="flex items-center gap-3 p-3 mb-2 rounded-2xl border-2 ${heat}">
+        <button onclick="speak(this.dataset.t)" data-t="${w.es}" class="text-2xl shrink-0 w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm">🔊</button>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-gray-800">${w.es}</div>
+          <div class="text-xs text-gray-500 truncate">${w.zh}${w.example ? ' · ' + w.example.es : ''}</div>
+        </div>
+        <div class="text-xs font-bold shrink-0 ${times >= 3 ? 'text-red-500' : times === 2 ? 'text-orange-500' : 'text-gray-400'}">错 ${times} 次</div>
+      </div>`;
+  }).join('');
+
+  actions.innerHTML = list.length >= 4
+    ? `<button onclick="startWrongPractice()" class="btn-primary w-full font-bold py-4 rounded-2xl text-white">专攻这 ${Math.min(list.length, 12)} 个词 →</button>`
+    : `<div class="text-center text-sm text-gray-500 py-3">再攒够 ${4 - list.length} 个词就能开始专项练习</div>`;
+}
+
+// 只用错题本里的词出题
+function startWrongPractice() {
+  const list = (state.wrongAnswers || []).map(w => ({ es: w.es, zh: w.zh, example: w.example }));
+  if (list.length < 4) return;
+  startLesson({ id: -2, words: list, title: '错题专攻', emoji: '🎯', isPractice: true }, true);
+}
+
 // 综合复习入口
 function startReview() {
   const learned = collectAllLearnedWords();
@@ -3268,6 +3362,13 @@ function lessonFooterResult(ok, title, detail) {
       ${ok ? '' : `<button onclick="speak(this.dataset.t)" data-t="${(currentQuestionWord && currentQuestionWord.es) || ''}" class="text-2xl shrink-0 p-1">🔊</button>`}
     </div>`;
   footerHandler = () => nextQuestion();
+}
+
+// 答对了就把这个词从错题本移走 —— 错题本要能变短，孩子才有成就感
+function clearWrong(word) {
+  if (!word || !word.es || !Array.isArray(state.wrongAnswers)) return;
+  const i = state.wrongAnswers.findIndex(x => x.es === word.es);
+  if (i >= 0) { state.wrongAnswers.splice(i, 1); saveState(); }
 }
 
 // 记录错题，供"错题本"复习使用
@@ -3459,7 +3560,7 @@ function bindQuestionEvents(q, correctKey, area) {
       const w = q.word;
       if (ok) {
         input.classList.add('text-green-600');
-        playSound('correct'); haptic(20); correctCount++; updateXp(5); flyFromEl(input);
+        playSound('correct'); haptic(20); correctCount++; updateXp(5); flyFromEl(input); clearWrong(w);
         lessonFooterResult(true, '拼对了！', w.es + ' = ' + w.zh);
       } else {
         input.classList.add('text-red-500');
@@ -3563,7 +3664,7 @@ function bindQuestionEvents(q, correctKey, area) {
       result.querySelectorAll('.order-tile').forEach(t => t.disabled = true);
       clear.disabled = true;
       if (ok) {
-        playSound('correct'); haptic(20); correctCount++; updateXp(8); flyFromEl(result);
+        playSound('correct'); haptic(20); correctCount++; updateXp(8); flyFromEl(result); clearWrong(q.word);
         lessonFooterResult(true, '句子排对了！', correct);
       } else {
         playSound('wrong'); haptic([30, 60, 30]); loseHeart(); recordWrong(q.word, q.type);
@@ -3612,7 +3713,7 @@ function bindQuestionEvents(q, correctKey, area) {
       chosen.classList.remove('selected');
       if (ok) {
         chosen.classList.add('option-correct');
-        playSound('correct'); haptic(20); correctCount++; updateXp(5); flyFromEl(chosen);
+        playSound('correct'); haptic(20); correctCount++; updateXp(5); flyFromEl(chosen); clearWrong(w);
         lessonFooterResult(true, '太棒了！', `${w.es} = ${w.zh}`);
       } else {
         chosen.classList.add('option-wrong');
@@ -3791,6 +3892,47 @@ $('back-from-story').addEventListener('click', () => showScreen('stories'));
 $('back-from-conversation').addEventListener('click', () => showScreen('conversations'));
 $('back-from-pronunciation').addEventListener('click', () => showScreen('learn'));
 $('back-from-pron-practice').addEventListener('click', () => { stopRecording(); showScreen('pronunciation'); });
+// ==================== Service Worker ====================
+// 装上之后：断网也能学；有新版本会弹提示条，不用再手动 ?v=N 强刷
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      // 已经有旧 SW 在跑，且新的装好了在等 → 提示更新
+      const notify = worker => {
+        if (!worker) return;
+        const bar = document.createElement('div');
+        bar.id = 'update-bar';
+        bar.innerHTML = '<span>🎉 有新版本啦</span><button>立即更新</button>';
+        bar.querySelector('button').onclick = () => {
+          worker.postMessage('skip-waiting');
+          bar.querySelector('button').textContent = '更新中…';
+        };
+        document.body.appendChild(bar);
+      };
+      if (reg.waiting) notify(reg.waiting);
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          // 只有在"本来就有旧版本"时才提示，首次安装不打扰
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) notify(nw);
+        });
+      });
+      // 每次回到 App 检查一次有没有新版本
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) reg.update().catch(() => {});
+      });
+    }).catch(() => {});
+
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading) return;
+      reloading = true;
+      location.reload();
+    });
+  });
+}
+
 // 底部操作区按钮：检查 / 继续 都走这里
 $('lesson-action').addEventListener('click', () => { if (footerHandler) footerHandler(); });
 

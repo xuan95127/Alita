@@ -19,10 +19,10 @@
 | **iPad Safari 优先** | 孩子用 iPad,横竖屏都得没 bug。touch event、viewport meta、apple-touch-icon 都得对。 |
 | **中国大陆可访问** | 部署在 **Cloudflare Pages**(不是 Vercel.app,后者被 GFW 屏蔽)。 |
 | **零成本** | 无后端,无第三方付费 API。所有数据放 localStorage。 |
-| **PWA** | manifest.json + apple-touch-icon SVG(避免 PNG 像素难看),支持"添加到主屏幕"。 |
+| **PWA** | manifest.json + apple-touch-icon SVG + `sw.js`(离线可用 + 自动更新提示)。 |
 | **无外网录音 API** | 录音评分用浏览器原生 `webkitSpeechRecognition` / `SpeechRecognition`,iOS Safari 上只 `onend` 可靠触发,必须加 `onend` 兜底。 |
 | **西语发音** | 用浏览器 `speechSynthesis.speak()`,中文/西语自动切语言。 |
-| **缓存** | 用户必须 `?v=N` 强刷。改完手动 +1。 |
+| **缓存** | ~~`?v=N` 强刷~~ 已被 Service Worker 取代：发版后 App 自己发现新版本并弹「立即更新」。 |
 
 ---
 
@@ -36,7 +36,7 @@
 │                            #     profile/settings/unit-detail/review/stories/...
 │                            #     conversations/pronunciation/...)
 │                            #   - 100+ 个 JS 函数 (一个 <script> 块,全局作用域)
-│                            #   - 嵌入式 Tailwind via CDN (生产环境应换,但能用)
+│                            #   - Tailwind 已改本地静态 `tailwind.css`(33KB,零外网依赖)
 │
 ├── content.js              # 题库:50 UNITS, 1568 words + 32 音素 (2083 行)
 │                            #   - 单元结构: { id, title, emoji, color, words[], tip, storyIntro, ... }
@@ -127,8 +127,8 @@ git push origin main
   voiceGender: 'auto',  // 'auto' | 'female' | 'male'
   speechRate: 'normal',  // 'slow' | 'normal' | 'fast'
   
-  // 错题本
-  wrongWords: {},  // { wordKey: { wrongCount, lastWrong } }
+  // 错题本(真名是 wrongAnswers,不是 wrongWords)
+  wrongAnswers: [],  // [{ es, zh, example, type, count, date, unitId }]
   
   // 任务
   dailyQuests: {
@@ -373,12 +373,12 @@ buyHearts() / endLessonByHearts()
 ### 7.1 内容侧
 - [ ] Unit 13-50 补结构化 grammar notes(目前只有 U1-12 有, U13+ 用 `unit.tip` fallback)
 - [ ] 检查 content.js 里 1568 个 example 句子的翻译质量(中文错别字/翻译不准)
-- [ ] PK 多人 tie 判断:目前只检查 snapshots[0] vs snapshots[1],3+ profile 会出错
+- [x] PK 多人 tie 判断 —— 已修,并列的每人都戴皇冠,领先值跟真正的第二名比
 - [ ] "已锁" 单元的预览(让 Alita/Luca 能看到下一单元是什么但不能进)
 
 ### 7.2 功能侧
-- [ ] 错题本 UI(数据 `state.wrongWords` 已存,没显示页面)
-- [ ] Achievement 页面(数据 `state.achievements` 已存)
+- [x] 错题本 —— 已做。注意原来 `wrongAnswers` **从来没被写入过**,是空壳;现在 recordWrong/clearWrong 打通
+- [x] Achievement 页面 —— 其实早就在 renderProfile 里渲染了,原文档写错
 - [ ] 跨 profile 数据对比(谁学得多)
 - [ ] 每日任务动态(目前 hardcode 3 个任务:10XP/30XP/1 课)
 - [ ] 完整 Lesson 答错后保存错词(目前只 type 题保存?需要确认)
@@ -389,7 +389,7 @@ buyHearts() / endLessonByHearts()
 - [ ] iPad Pro 12.9 寸布局调整
 
 ### 7.4 PWA
-- [ ] Service Worker(目前没注册,只靠浏览器缓存)
+- [x] Service Worker —— 已加 `sw.js`,离线可用 + 新版本提示条
 - [ ] 离线支持
 
 ---
@@ -544,3 +544,43 @@ recognition.onerror = (e) => onResult('', 0, e.error);
 ---
 
 **写于 2026-08-22,作者: Mavis。下一个 AI 加油,这 App 值得做好。**
+
+---
+
+## 13. 2026-08-22 第二轮(交互重做)
+
+### 干掉的几个真 bug
+| bug | 症状 |
+|---|---|
+| `choice_zh_es` 自动朗读 `q.word.es` | 那就是答案。题型完全失效 |
+| 进题连播题干 + 4 个选项 | 每题干等 6.5 秒才能作答 |
+| 拼写/排序题 gating | 必须先点喇叭"听过"才解锁提交 |
+| 听力题每个选项带小喇叭 | 逐个试听就能蒙对,听力题作废 |
+| `'type'` 被 push 两次 | 拼写题占 30%,对零基础太难 → 17.7% |
+| `state.wrongAnswers` | 声明了但**没有任何写入**,错题本是空壳 |
+| 干扰项同义 | `pez`/`pescado` 都是"鱼",选对被判错(37 组 + `Claro`/`claro`) |
+| `showScreen` 不回顶部 | 切屏停在上个页面的滚动位置,看着像白屏 |
+| 答题时底部导航还在 | 孩子误触直接跳出,进度全丢 |
+
+### 新的答题流程(Duolingo 式)
+1. 进 lesson → `body.focus-mode`,顶栏和底部导航隐藏
+2. 点选项 → 只高亮(`.option-btn.selected`),**可以反悔**
+3. 点底部 `#lesson-action`「检查」→ 才判定
+4. 判定后 `#lesson-footer` 变绿/红,显示正确答案 + 例句 + 🔊,按钮变「继续」
+5. 键盘:`1-4` 选选项,`Enter` 检查/继续;`haptic()` 三档震动
+
+关键函数:`lessonFooterReset()` / `lessonFooterArm()` / `lessonFooterResult()`,
+全局 `footerHandler` 持有当前动作。**加新题型时记得走这套,别再往 question-area 里塞按钮。**
+
+### 出题去歧义
+`isAmbiguousPair(a,b)`:西语同形(去重音+去大小写)**或**中文义项集合有交集 → 不能同时出现。
+`zhSenses('土豆（拉美）')` → `['土豆']`。词池不足时自动从已学词补足,并保证干扰项之间也不互相同义。
+验证:12000 道模拟题 0 歧义。
+
+### 工程
+- **Tailwind CDN → 本地** `npm run build:css`(改完类名必须重跑,否则新类名没样式!)
+- `sw.js`:index.html 网络优先(保证拿到新版),其余 stale-while-revalidate
+- `server.js` + `.claude/launch.json` 本地预览(已 gitignore)
+
+### 回归口径
+浏览器里跑这段,应该 `errCount: 0`:12 个屏幕 + 600 道题 + 60 故事 + 32 对话全渲染一遍。
