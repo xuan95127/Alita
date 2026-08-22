@@ -135,6 +135,7 @@
   .es-key:active { transform: translateY(2px); border-bottom-width: 2px; background: #f0f9e8; border-color: var(--duo-green); }
 
   /* 有新版本时从顶部滑下来的提示条 */
+  body.has-update-bar { padding-top: 46px; }
   #update-bar {
     position: fixed; top: 0; left: 0; right: 0; z-index: 60;
     background: var(--duo-blue); color: #fff;
@@ -861,6 +862,8 @@ function defaultState() {
     totalTime: 0, lastActiveDate: null,
     nightLearner: false, earlyLearner: false,
     dailyQuests: { date: null, list: [] },
+    // 每日任务要看"今天"做了多少，不能拿历史总数去比
+    todayLessons: 0, todayStories: 0, todayConvs: 0, todayPerfect: 0,
     earnedAchievements: [],
     // 继续上次 + 错题本
     lastUnitId: null, lastScreen: null,
@@ -1132,6 +1135,7 @@ function checkDaily() {
   const today = new Date().toDateString();
   if (state.lastDailyDate !== today) {
     state.todayXp = 0; state.hearts = 5; state.lastDailyDate = today;
+    state.todayLessons = 0; state.todayStories = 0; state.todayConvs = 0; state.todayPerfect = 0;
     state.dailyQuests = { date: today, list: generateQuests() };
     saveState();
   }
@@ -1163,12 +1167,38 @@ function bumpStreak() {
   }
 }
 
+// 任务池：每天按日期轮换，不再天天是同样 3 个
+const QUEST_POOL = [
+  { id: 'xp10',      text: '获得 10 XP',      target: 10, reward: 5,  icon: '⭐', type: 'xp' },
+  { id: 'xp30',      text: '获得 30 XP',      target: 30, reward: 10, icon: '🌟', type: 'xp' },
+  { id: 'xp50',      text: '获得 50 XP',      target: 50, reward: 15, icon: '💫', type: 'xp' },
+  { id: 'lesson1',   text: '完成 1 节课',     target: 1,  reward: 10, icon: '📚', type: 'lessons' },
+  { id: 'lesson2',   text: '完成 2 节课',     target: 2,  reward: 20, icon: '📖', type: 'lessons' },
+  { id: 'story1',    text: '读 1 个西语故事', target: 1,  reward: 10, icon: '📕', type: 'stories' },
+  { id: 'conv1',     text: '练 1 段情景对话', target: 1,  reward: 10, icon: '💬', type: 'convs' },
+  { id: 'perfect1',  text: '拿 1 次全对',     target: 1,  reward: 20, icon: '🎯', type: 'perfect' },
+];
+
 function generateQuests() {
-  return [
-    { id: 'q1', text: '获得 10 XP', target: 10, progress: 0, reward: 5, icon: '⭐' },
-    { id: 'q2', text: '获得 30 XP', target: 30, progress: 0, reward: 10, icon: '⭐' },
-    { id: 'q3', text: '完成 1 节课程', target: 1, progress: 0, reward: 15, icon: '📚', type: 'lessons' }
-  ];
+  // 固定留一个"拿 10 XP"当保底（最容易达成），另外两个按日期轮换
+  const base = QUEST_POOL[0];
+  const rest = QUEST_POOL.slice(1);
+  const dayIndex = Math.floor(Date.now() / 86400000);
+  const a = rest[dayIndex % rest.length];
+  let b = rest[(dayIndex * 3 + 1) % rest.length];
+  if (b.id === a.id) b = rest[(dayIndex * 3 + 2) % rest.length];
+  return [base, a, b].map(q => ({ ...q, progress: 0 }));
+}
+
+// 任务进度一律读"今天"的计数
+function questProgress(q) {
+  switch (q.type) {
+    case 'lessons': return state.todayLessons || 0;
+    case 'stories': return state.todayStories || 0;
+    case 'convs':   return state.todayConvs || 0;
+    case 'perfect': return state.todayPerfect || 0;
+    default:        return state.todayXp || 0;
+  }
 }
 
 function $(id) { return document.getElementById(id); }
@@ -2301,6 +2331,42 @@ function showGrammarCard(unit, onStart) {
   if (startBtn) startBtn.addEventListener('click', () => { closeModal(); onStart(); });
 }
 
+// 锁住的单元：让孩子看见前面有什么，知道还差几步
+function showLockedPreview(unit, idx) {
+  const words = getUnitWords(unit) || [];
+  const peek = words.slice(0, 4).map(w =>
+    `<div class="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2 mb-1.5">
+       <span class="font-bold text-gray-700">${w.es}</span>
+       <span class="text-sm text-gray-400">${w.zh}</span>
+     </div>`).join('');
+  // 还差几个单元才解锁
+  const need = [];
+  for (let i = 1; i < unit.id; i++) if (!isUnitCompleted(i)) need.push(i);
+  const nextUp = need.length ? need[0] : unit.id - 1;
+  showModal(`
+    <div class="text-center">
+      <div class="text-5xl mb-2 grayscale opacity-60">${unit.emoji || '🔒'}</div>
+      <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">🔒 还没解锁</div>
+      <h2 class="text-xl font-bold text-gray-800 mb-1">第 ${idx + 1} 单元 · ${unit.title}</h2>
+      <div class="text-sm text-gray-500 mb-4">${words.length} 个新词在等你</div>
+      <div class="text-left mb-4">
+        <div class="text-xs text-gray-500 font-bold mb-2">👀 先偷看几个：</div>
+        ${peek}
+        ${words.length > 4 ? `<div class="text-center text-xs text-gray-400 mt-1">…还有 ${words.length - 4} 个</div>` : ''}
+      </div>
+      <div class="bg-blue-50 border-l-4 border-blue-400 rounded-xl p-3 mb-4 text-left">
+        <div class="text-sm text-blue-800">
+          ${need.length > 1
+            ? `先把<b>第 ${nextUp} 单元</b>学完，再往前推 ${need.length - 1} 关就到这里啦！`
+            : `把<b>第 ${nextUp} 单元</b>学完就解锁！`}
+        </div>
+      </div>
+      <button onclick="closeModal(); startLesson(UNITS.find(u => u.id === ${nextUp}))"
+        class="w-full btn-primary font-bold py-3 rounded-2xl text-white">去学第 ${nextUp} 单元 →</button>
+      <button onclick="closeModal()" class="w-full btn-secondary font-bold py-2.5 rounded-2xl mt-2 text-sm">先看看别的</button>
+    </div>`);
+}
+
 function showUnitDetail(unit) {
   const level = unit.level || getUnitLevel(unit.id);
   $('unit-detail-title').innerHTML = `第 ${unit.id} 单元 <span class="text-xs ${LEVEL_COLORS[level]} text-white px-2 py-0.5 rounded align-middle ml-1">${level}</span>`;
@@ -2593,7 +2659,7 @@ function finishStory() {
   `;
   state.totalXp += storyScore * 5 + 10;
   state.todayXp += storyScore * 5 + 10;
-  state.totalLessons++;
+  state.totalLessons++; state.todayStories = (state.todayStories || 0) + 1;
   // 记录完成的 story
   if (!state.completedStories) state.completedStories = [];
   if (!state.completedStories.includes(currentStory.id)) {
@@ -2903,7 +2969,7 @@ function finishPronunciationLesson() {
   `;
   state.totalXp += prnScore * 8 + 20;
   state.todayXp += prnScore * 8 + 20;
-  state.totalLessons++;
+  state.totalLessons++; state.todayLessons = (state.todayLessons || 0) + 1;
   bumpStreak();
   state.lastActiveDate = new Date().toDateString();
   saveState(); updateTopBar(); updateDaily();
@@ -3076,7 +3142,7 @@ function finishConversation() {
   `;
   state.totalXp += 20;
   state.todayXp += 20;
-  state.totalLessons++;
+  state.totalLessons++; state.todayConvs = (state.todayConvs || 0) + 1;
   // 记录完成的 conv
   if (!state.completedConversations) state.completedConversations = [];
   if (!currentConv) currentConv = { id: null };
@@ -3164,7 +3230,7 @@ function renderHome() {
     const crowns = state.unitCrowns[unit.id] || 0;
     const level = unit.level || getUnitLevel(unit.id);
     const row = document.createElement('div');
-    row.className = `path-row flex items-center gap-3 py-2 ${actualIdx % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`;
+    row.className = `path-row flex items-center gap-3 py-2 ${actualIdx % 2 === 0 ? 'flex-row' : 'flex-row-reverse'} ${completed ? 'path-done' : ''}`;
     row.innerHTML = `
       <div class="flex-1 ${actualIdx % 2 === 0 ? 'text-right pr-2' : 'text-left pl-2'}">
         <div class="font-bold text-gray-800">第 ${actualIdx + 1} 单元</div>
@@ -3197,6 +3263,10 @@ function renderHome() {
       btn.parentNode.insertBefore(wrap, btn);
       wrap.appendChild(btn);
       wrap.appendChild(infoBtn);
+    } else {
+      // 锁住的单元点了要有反馈，否则孩子以为 App 坏了
+      const btn = row.querySelector('button.unit-circle');
+      btn.addEventListener('click', () => showLockedPreview(unit, actualIdx));
     }
   });
 
@@ -3234,7 +3304,7 @@ function renderQuests() {
   const list = $('quest-list');
   list.innerHTML = '';
   state.dailyQuests.list.forEach(q => {
-    let progress = q.type === 'lessons' ? state.totalLessons : state.todayXp;
+    let progress = questProgress(q);
     const done = progress >= q.target;
     const div = document.createElement('div');
     div.className = `bg-white rounded-2xl p-4 shadow ${done ? 'opacity-60' : ''}`;
@@ -3995,8 +4065,8 @@ function finishLesson(endedEarly = false) {
     }
     finishedUnitTitle = currentLesson.title;
   }
-  state.totalLessons++;
-  if (accuracy === 100) state.perfectLessons++;
+  state.totalLessons++; state.todayLessons = (state.todayLessons || 0) + 1;
+  if (accuracy === 100) { state.perfectLessons++; state.todayPerfect = (state.todayPerfect || 0) + 1; }
 
   bumpStreak();
   const hour = new Date().getHours();
@@ -4094,6 +4164,7 @@ if ('serviceWorker' in navigator) {
         const bar = document.createElement('div');
         bar.id = 'update-bar';
         bar.innerHTML = '<span>🎉 有新版本啦</span><button>立即更新</button>';
+        document.body.classList.add('has-update-bar');
         bar.querySelector('button').onclick = () => {
           worker.postMessage('skip-waiting');
           bar.querySelector('button').textContent = '更新中…';

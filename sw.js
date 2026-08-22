@@ -4,7 +4,7 @@
 // 每次改完代码只要 npm run build:css && git push，
 // CACHE 名字里的时间戳由 build 脚本无关 —— 这里用内容无关的固定名，
 // 靠 index.html 的 network-first 策略保证永远拿到最新入口。
-const CACHE = 'mini-espanol-v3';
+const CACHE = 'mini-espanol-v4';
 
 // 首屏必需的静态资源
 const ASSETS = [

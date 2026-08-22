@@ -429,7 +429,7 @@ const STORIES = [
     ]
   },
   {
-    id: 16, unitId: 5, title: "下雨天", level: "A1",
+    id: 16, unitId: 5, title: "下雨天", description: "雨天待在家里", level: "A1",
     icon: "🌧️",
     sentences: [
       { es: "Hoy llueve mucho.", zh: "今天雨下得很大。" },
@@ -457,7 +457,7 @@ const STORIES = [
     ]
   },
   {
-    id: 17, unitId: 6, title: "在公园里", level: "A1",
+    id: 17, unitId: 6, title: "在公园里", description: "和爸爸去公园玩", level: "A1",
     icon: "🌳",
     sentences: [
       { es: "Pedro va al parque con su papá.", zh: "佩德罗和爸爸去公园。" },
@@ -485,7 +485,7 @@ const STORIES = [
     ]
   },
   {
-    id: 18, unitId: 8, title: "家庭晚餐", level: "A2",
+    id: 18, unitId: 8, title: "家庭晚餐", description: "一家人围坐吃饭", level: "A2",
     icon: "🍽️",
     sentences: [
       { es: "Es la hora de cenar.", zh: "晚餐时间到了。" },
