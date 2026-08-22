@@ -59,6 +59,37 @@
   @keyframes flicker { 0%,100%{transform:scale(1) rotate(-3deg)} 50%{transform:scale(1.15) rotate(3deg)} }
   .gradient-card { background: linear-gradient(135deg, #58CC02 0%, #37b300 100%); }
   .word-tile { transition: all 0.2s; }
+
+  /* ===== 答题专注模式：隐藏全局导航，避免孩子误触退出丢进度 ===== */
+  body.focus-mode > header, body.focus-mode > nav { display: none !important; }
+  body.focus-mode #screen-lesson { padding-bottom: 190px; }
+
+  /* ===== 底部固定操作区（Duolingo 式两步确认）===== */
+  .lesson-footer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+    background: #fff; border-top: 2px solid #e5e5e5;
+    transition: background 0.2s, border-color 0.2s;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .lesson-footer.state-correct { background: #d7ffb8; border-top-color: #a5e86b; }
+  .lesson-footer.state-wrong   { background: #ffdfe0; border-top-color: #ffb3b5; }
+  .lesson-footer-inner { max-width: 640px; margin: 0 auto; padding: 12px 16px 16px; }
+  .lesson-action-btn {
+    width: 100%; padding: 15px; border-radius: 16px; font-weight: 800; font-size: 17px;
+    letter-spacing: 0.5px; background: var(--duo-green); color: #fff;
+    box-shadow: 0 4px 0 var(--duo-green-dark); transition: all 0.1s;
+  }
+  .lesson-action-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 var(--duo-green-dark); }
+  .lesson-action-btn:disabled { background: #e5e5e5; color: #afafaf; box-shadow: none; }
+  .lesson-action-btn.wrong { background: var(--duo-red); box-shadow: 0 4px 0 #d32f2f; }
+  /* 选中态：只高亮不判定，孩子可以改主意 */
+  .option-btn.selected { border-color: var(--duo-blue) !important; background: #ddf4ff !important; color: #1899d6 !important; }
+  .option-btn .opt-key {
+    width: 26px; height: 26px; flex-shrink: 0; border-radius: 8px; border: 2px solid #e5e5e5;
+    font-size: 12px; color: #afafaf; display: flex; align-items: center; justify-content: center; font-weight: 700;
+  }
+  .option-btn.selected .opt-key { border-color: var(--duo-blue); color: var(--duo-blue); }
+  @media (max-width: 480px) { .option-btn .opt-key { display: none; } }
   .word-tile:active { transform: scale(0.95); }
 
   /* 1. 圆环进度 */
@@ -354,11 +385,21 @@
         <button id="exit-lesson" class="text-gray-500 text-xl">✕</button>
         <div class="flex items-center gap-2"><span class="text-xl">❤️</span><span id="lesson-hearts" class="font-bold text-red-500">5</span></div>
       </div>
-      <div class="h-4 bg-gray-200 rounded-full overflow-hidden">
-        <div id="lesson-progress" class="progress-bar h-full gradient-card" style="width: 0%"></div>
+      <div class="flex items-center gap-3">
+        <div class="flex-1 h-4 bg-gray-200 rounded-full overflow-hidden">
+          <div id="lesson-progress" class="progress-bar h-full gradient-card" style="width: 0%"></div>
+        </div>
+        <div id="lesson-counter" class="text-xs font-bold text-gray-400 tabular-nums">1/12</div>
       </div>
     </div>
-    <div id="question-area" class="bg-white rounded-2xl p-6 shadow-lg min-h-[450px]"></div>
+    <div id="question-area" class="bg-white rounded-2xl p-6 shadow-lg min-h-[420px]"></div>
+    <!-- 固定底部操作区：检查 / 反馈 / 继续 -->
+    <div id="lesson-footer" class="lesson-footer hidden">
+      <div class="lesson-footer-inner">
+        <div id="lesson-feedback" class="hidden"></div>
+        <button id="lesson-action" class="lesson-action-btn" disabled>检查</button>
+      </div>
+    </div>
   </section>
 
   <section id="screen-result" class="hidden">
@@ -2117,6 +2158,12 @@ function showScreen(name) {
   if (['learn', 'quests', 'shop', 'profile'].includes(name)) {
     document.querySelector(`.nav-btn[data-screen="${name}"]`)?.classList.add('active');
   }
+  // 答题/发音练习时进入专注模式：藏起顶栏和底部导航，防止误触退出
+  const focus = (name === 'lesson' || name === 'pronunciation-practice');
+  document.body.classList.toggle('focus-mode', focus);
+  $('lesson-footer').classList.toggle('hidden', name !== 'lesson');
+  // 切屏一律回到顶部，否则会停在上个页面的滚动位置（看起来像白屏）
+  window.scrollTo(0, 0);
   if (name === 'learn') renderHome();
   if (name === 'quests') renderQuests();
   if (name === 'profile') renderProfile();
@@ -3091,6 +3138,25 @@ function startLesson(unit, isPractice = false) {
   });
 }
 
+// 把中文释义拆成义项集合："土豆（拉美）" → ["土豆"]，"矮/低" → ["矮","低"]
+function zhSenses(zh) {
+  return (zh || '')
+    .replace(/[（(][^)）]*[)）]/g, '')
+    .split(/[\/、,，;；]/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+function normEs(s) {
+  return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+// 两个词条是否会让题目出现"两个都对"的选项
+// 例：pez/pescado 都是"鱼"；Claro/claro 只差大小写
+function isAmbiguousPair(a, b) {
+  if (normEs(a.es) === normEs(b.es)) return true;
+  const B = new Set(zhSenses(b.zh));
+  return zhSenses(a.zh).some(s => B.has(s));
+}
+
 function generateQuestions(words, isPractice, unit) {
   let pool = isPractice ? collectAllLearnedWords() : words;
   if (pool.length < 4) pool = words;
@@ -3098,18 +3164,41 @@ function generateQuestions(words, isPractice, unit) {
   words.forEach((w, i) => {
     // 排序题需要例句 >= 3 词才有意义；拼写题太短（<=1 词）跳过
     const exampleWords = w.example ? w.example.es.split(/\s+/).filter(x => x.length > 0) : [];
-    const availableTypes = ['choice_es_zh', 'choice_zh_es', 'listen', 'type', 'match'];
+    // 注意：'type'（拼写）只放一次。之前这里 push 了第二遍，
+    // 导致拼写题占到全部题目的 30%，对零基础孩子太难。
+    const availableTypes = ['choice_es_zh', 'choice_zh_es', 'listen', 'match'];
     if (exampleWords.length >= 3) availableTypes.push('order');
-    if (w.es && w.es.split(/\s+/).length >= 1 && !/^\W+$/.test(w.es)) availableTypes.push('type');
+    if (w.es && !/^\W+$/.test(w.es)) availableTypes.push('type');
     shuffle(availableTypes);
     availableTypes.slice(0, 3).forEach(t => {
-      const others = pool.filter(x => x.es !== w.es);
+      // 干扰项必须和正确答案"不会都对"，否则孩子选了同义词会被判错
+      let others = pool.filter(x => !isAmbiguousPair(x, w));
+      // 词池太小时（如单元只有几个词）放宽到全部已学词，仍然排除歧义项
+      if (others.length < 3) {
+        const wide = collectAllLearnedWords().concat(UNITS[1] ? getUnitWords(UNITS[1]) : []);
+        const seenEs = new Set(others.map(x => normEs(x.es)));
+        wide.forEach(x => {
+          if (!isAmbiguousPair(x, w) && !seenEs.has(normEs(x.es))) { seenEs.add(normEs(x.es)); others.push(x); }
+        });
+      }
       shuffle(others);
-      const opts = shuffle([w, ...others.slice(0, 3)]);
+      // 干扰项之间也不能互相同义（否则配对题会出现两条一样的中文）
+      const picked = [];
+      for (const cand of others) {
+        if (picked.length >= 3) break;
+        if (picked.some(p => isAmbiguousPair(p, cand))) continue;
+        picked.push(cand);
+      }
+      const opts = shuffle([w, ...picked]);
       qs.push({ type: t, word: w, options: opts, isPronunciation: unit && unit.type === 'pronunciation' });
     });
   });
-  return shuffle(qs).slice(0, 12);
+  // 难度爬坡：先认读（看西语选中文）→ 再产出（看中文选西语/听力/配对）→ 最后拼写/排序。
+  // 一上来就拼写会把孩子劝退，这是 Duolingo / LingoDeer 都在用的顺序。
+  const DIFFICULTY = { choice_es_zh: 0, match: 1, listen: 2, choice_zh_es: 3, order: 4, type: 5 };
+  const picked = shuffle(qs).slice(0, 12);
+  picked.sort((x, y) => (DIFFICULTY[x.type] || 0) - (DIFFICULTY[y.type] || 0));
+  return picked;
 }
 
 function collectAllLearnedWords() {
@@ -3136,10 +3225,75 @@ function startReview() {
   startLesson(reviewUnit, true);
 }
 
+// ==================== 底部操作区（两步确认）====================
+let footerHandler = null;
+
+function haptic(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+}
+
+function lessonFooterReset() {
+  const f = $('lesson-footer'), btn = $('lesson-action'), fb = $('lesson-feedback');
+  f.classList.remove('state-correct', 'state-wrong');
+  btn.classList.remove('wrong');
+  btn.textContent = '检查';
+  btn.disabled = true;
+  fb.classList.add('hidden'); fb.innerHTML = '';
+  footerHandler = null;
+}
+
+// 让"检查"按钮可点（孩子选了答案之后）
+function lessonFooterArm(label, handler) {
+  const btn = $('lesson-action');
+  btn.disabled = false;
+  if (label) btn.textContent = label;
+  footerHandler = handler;
+}
+
+// 判定后展示反馈面板，按钮变"继续"
+function lessonFooterResult(ok, title, detail) {
+  const f = $('lesson-footer'), btn = $('lesson-action'), fb = $('lesson-feedback');
+  f.classList.add(ok ? 'state-correct' : 'state-wrong');
+  btn.classList.toggle('wrong', !ok);
+  btn.textContent = '继续';
+  btn.disabled = false;
+  fb.classList.remove('hidden');
+  fb.innerHTML = `
+    <div class="flex items-start gap-3 mb-3">
+      <div class="text-3xl leading-none">${ok ? '🎉' : '💡'}</div>
+      <div class="flex-1 text-left min-w-0">
+        <div class="font-extrabold text-lg ${ok ? 'text-green-700' : 'text-red-600'}">${title}</div>
+        ${detail ? `<div class="text-sm mt-0.5 break-words ${ok ? 'text-green-800' : 'text-red-700'}">${detail}</div>` : ''}
+      </div>
+      ${ok ? '' : `<button onclick="speak(this.dataset.t)" data-t="${(currentQuestionWord && currentQuestionWord.es) || ''}" class="text-2xl shrink-0 p-1">🔊</button>`}
+    </div>`;
+  footerHandler = () => nextQuestion();
+}
+
+// 记录错题，供"错题本"复习使用
+function recordWrong(word, type) {
+  if (!word || !word.es) return;
+  if (!Array.isArray(state.wrongAnswers)) state.wrongAnswers = [];
+  const hit = state.wrongAnswers.find(x => x.es === word.es);
+  if (hit) { hit.count = (hit.count || 1) + 1; hit.date = Date.now(); }
+  else state.wrongAnswers.push({
+    es: word.es, zh: word.zh, example: word.example, type,
+    count: 1, date: Date.now(), unitId: currentLesson ? currentLesson.id : null
+  });
+  // 只留最近 200 条，避免 localStorage 撑爆
+  if (state.wrongAnswers.length > 200) state.wrongAnswers = state.wrongAnswers.slice(-200);
+  saveState();
+}
+
+let currentQuestionWord = null;
+
 function renderQuestion() {
   const q = lessonQuestions[currentQuestionIdx];
   const total = lessonQuestions.length;
+  currentQuestionWord = q.word;
+  lessonFooterReset();
   $('lesson-progress').style.width = ((currentQuestionIdx / total) * 100) + '%';
+  $('lesson-counter').textContent = (currentQuestionIdx + 1) + '/' + total;
   const area = $('question-area');
   let html = '';
   const correctKey = q.word.es.toLowerCase();
@@ -3160,7 +3314,7 @@ function renderQuestion() {
         ${q.word.example ? `<div class="text-xs text-gray-400 italic mb-6">"${q.word.example.es}"</div>` : '<div class="mb-6"></div>'}
         <div class="grid grid-cols-1 gap-3">
           ${q.options.map((opt, i) => `
-            <button class="option-btn relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-lg flex items-center gap-3" data-correct="${opt.es === q.word.es}">
+            <button class="option-btn relative bg-white border-2 border-gray-200 text-gray-800 font-semibold py-4 px-5 rounded-2xl text-lg flex items-center gap-3" data-idx="${i}" data-correct="${opt.es === q.word.es}"><span class="opt-key">${i + 1}</span>
               <span onclick="event.stopPropagation();speak('${opt.es}')" class="text-2xl opacity-50 hover:opacity-100 cursor-pointer p-1" title="听发音">🔊</span>
               <span class="flex-1 text-left">${opt.zh}</span>
             </button>
@@ -3177,7 +3331,7 @@ function renderQuestion() {
         ${q.word.example ? `<div class="text-xs text-gray-400 italic mb-6">"${q.word.example.zh}"</div>` : '<div class="mb-6"></div>'}
         <div class="grid grid-cols-1 gap-3">
           ${q.options.map((opt, i) => `
-            <button class="option-btn relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-lg flex items-center gap-3" data-correct="${opt.es === q.word.es}">
+            <button class="option-btn relative bg-white border-2 border-gray-200 text-gray-800 font-semibold py-4 px-5 rounded-2xl text-lg flex items-center gap-3" data-idx="${i}" data-correct="${opt.es === q.word.es}"><span class="opt-key">${i + 1}</span>
               <span onclick="event.stopPropagation();speak('${opt.es}')" class="text-2xl opacity-50 hover:opacity-100 cursor-pointer p-1" title="听发音">🔊</span>
               <span class="flex-1 text-left font-bold">${opt.es}</span>
             </button>
@@ -3191,11 +3345,11 @@ function renderQuestion() {
         <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">听力</div>
         <div class="text-sm text-gray-500 mb-4">听一听，选出正确的翻译</div>
         <button onclick="speak('${q.word.es}')" class="text-7xl mb-2 hover:scale-110 transition-transform inline-block">🔊</button>
-        <div class="text-xs text-gray-400 mb-6">点击喇叭可重听</div>
+        <div class="text-xs text-gray-400 mb-1">点击喇叭可重听</div>
+        <button onclick="speak('${q.word.es}', { rate: 0.5 })" class="text-xs text-blue-500 font-bold mb-5 px-3 py-1 rounded-full bg-blue-50">🐢 慢速再听一次</button>
         <div class="grid grid-cols-1 gap-3">
           ${q.options.map((opt, i) => `
-            <button class="option-btn relative bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-2xl text-lg flex items-center gap-3" data-correct="${opt.es === q.word.es}">
-              <span onclick="event.stopPropagation();speak('${opt.es}')" class="text-2xl opacity-50 hover:opacity-100 cursor-pointer p-1" title="听发音">🔊</span>
+            <button class="option-btn relative bg-white border-2 border-gray-200 text-gray-800 font-semibold py-4 px-5 rounded-2xl text-lg flex items-center gap-3" data-idx="${i}" data-correct="${opt.es === q.word.es}"><span class="opt-key">${i + 1}</span>
               <span class="flex-1 text-left">${opt.zh}</span>
             </button>
           `).join('')}
@@ -3211,10 +3365,9 @@ function renderQuestion() {
         <button id="type-speaker" data-text="${q.word.es}" class="big-speaker mx-auto mb-1 w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white text-4xl flex items-center justify-center shadow-lg active:scale-95 transition recording-pulse">
           🔊
         </button>
-        <div class="text-xs text-blue-600 font-bold mb-4" id="type-speaker-hint">点击播放发音</div>
+        <div class="text-xs text-blue-600 font-bold mb-4" id="type-speaker-hint">听不清？点喇叭重播</div>
         <input id="type-input" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full text-center text-2xl font-bold border-b-4 border-gray-300 bg-transparent py-3 px-4 focus:border-green-500 focus:outline-none mb-3" placeholder="输入西语...">
-        <button id="type-submit" class="btn-primary font-bold py-3 px-8 rounded-2xl w-full" disabled>先听发音</button>
-        <div id="type-hint" class="mt-3 text-sm text-gray-500 min-h-[20px]"></div>
+        <div id="type-hint" class="mt-3 text-sm text-gray-500 min-h-[24px]"></div>
       </div>
     `;
   } else if (q.type === 'match') {
@@ -3251,13 +3404,12 @@ function renderQuestion() {
         <button id="order-speaker" data-text="${correct}" class="big-speaker mx-auto mb-1 w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white text-4xl flex items-center justify-center shadow-lg active:scale-95 transition recording-pulse">
           🔊
         </button>
-        <div class="text-xs text-blue-600 font-bold mb-4" id="order-speaker-hint">点击播放整句</div>
+        <div class="text-xs text-blue-600 font-bold mb-4" id="order-speaker-hint">听不清？点喇叭重播</div>
         <div id="order-result" class="min-h-[60px] bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl p-3 mb-4 flex flex-wrap gap-2 justify-center"></div>
         <div id="order-pool" class="flex flex-wrap gap-2 justify-center mb-4">
           ${scrambled.map((w, i) => `<button data-word="${w}" class="order-tile btn-secondary px-4 py-2 rounded-xl font-bold">${w}</button>`).join('')}
         </div>
-        <button id="order-submit" class="btn-primary font-bold py-3 px-8 rounded-2xl w-full" disabled>先听整句</button>
-        <button id="order-clear" class="btn-secondary mt-2 px-4 py-2 rounded-xl font-bold text-sm">清除</button>
+        <button id="order-clear" class="btn-secondary px-4 py-2 rounded-xl font-bold text-sm">清除重排</button>
       </div>
     `;
   }
@@ -3266,50 +3418,33 @@ function renderQuestion() {
   area.classList.add('bounce-in');
   setTimeout(() => area.classList.remove('bounce-in'), 500);
   bindQuestionEvents(q, correctKey, area);
-  // 选择题进入时：先播题干 + 4 个选项（间隔 1.2s），让用户必听到再选
-  if (q.type === 'choice_es_zh' || q.type === 'choice_zh_es' || q.type === 'listen') {
-    setTimeout(() => speak(q.word.es), 500);
-    q.options.forEach((opt, i) => {
-      setTimeout(() => speak(opt.es), 500 + 1500 * (i + 1));
-    });
+  // 只在"题干本身就是西语声音"的题型自动播一次。
+  // 看中文选西语时绝不能播 q.word.es —— 那就是答案。
+  if (q.type === 'listen' || q.type === 'choice_es_zh') {
+    setTimeout(() => speak(q.word.es), 400);
   }
 }
 
 function bindQuestionEvents(q, correctKey, area) {
   if (q.type === 'type') {
-    const input = $('type-input'), submit = $('type-submit');
+    const input = $('type-input');
     const speaker = $('type-speaker');
-    const speakerHint = $('type-speaker-hint');
-    let listened = false;
+    const hintEl = $('type-hint');
 
-    const enableSubmit = () => {
-      submit.disabled = false;
-      submit.textContent = '检查';
-      submit.classList.remove('opacity-50');
-    };
-
-    const playAndMark = () => {
-      const text = speaker.dataset.text;
-      speak(text);
+    const playIt = () => {
+      speak(speaker.dataset.text);
       speaker.classList.add('speaking');
+      speaker.classList.remove('recording-pulse');
       setTimeout(() => speaker.classList.remove('speaking'), 1500);
-      if (!listened) {
-        listened = true;
-        enableSubmit();
-        speakerHint.textContent = '✓ 已听过，可以开始写啦';
-        speaker.classList.remove('recording-pulse');
-      }
     };
+    speaker.addEventListener('click', playIt);
+    setTimeout(playIt, 400);
+    setTimeout(() => input.focus(), 600);
 
-    speaker.addEventListener('click', playAndMark);
-    // 自动播放 1 次（用户已点击进入题目，在手势链里）
-    setTimeout(playAndMark, 400);
-
-    input.focus();
     const check = () => {
       // 模糊匹配：先显式把 ñ→n，再 NFD 去重音
       // 单字（无空格）再去空白；词组（带空格）保留空格让孩子学着用
-      const normalize = s => s
+      const normalize = t => t
         .replace(/ñ/g, 'n').replace(/Ñ/g, 'N')
         .replace(/ü/g, 'u').replace(/Ü/g, 'U')
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -3317,193 +3452,190 @@ function bindQuestionEvents(q, correctKey, area) {
         .trim();
       const isPhrase = /\s/.test(correctKey);
       const finalNormalize = isPhrase
-        ? s => normalize(s).replace(/\s+/g, ' ')  // 多空格合并成单空格
-        : s => normalize(s).replace(/\s+/g, '');  // 单字不要求空格
-      const ans = input.value;
-      const ok = finalNormalize(ans) === finalNormalize(correctKey);
-      submit.disabled = true; input.disabled = true;
+        ? t => normalize(t).replace(/\s+/g, ' ')
+        : t => normalize(t).replace(/\s+/g, '');
+      const ok = finalNormalize(input.value) === finalNormalize(correctKey);
+      input.disabled = true;
+      const w = q.word;
       if (ok) {
-        submit.classList.remove('btn-primary'); submit.classList.add('bg-green-500');
-        submit.textContent = '✓ 正确！';
-        playSound('correct'); correctCount++; updateXp(5); flyFromEl(submit);
-        setTimeout(nextQuestion, 900);
+        input.classList.add('text-green-600');
+        playSound('correct'); haptic(20); correctCount++; updateXp(5); flyFromEl(input);
+        lessonFooterResult(true, '拼对了！', w.es + ' = ' + w.zh);
       } else {
-        submit.classList.remove('btn-primary'); submit.classList.add('bg-danger');
-        submit.textContent = '✗ 答错了';
-        submit.style.background = '#FF4B4B';
-        playSound('wrong'); loseHeart();
+        input.classList.add('text-red-500');
+        playSound('wrong'); haptic([30, 60, 30]); loseHeart(); recordWrong(w, q.type);
         area.classList.add('shake');
         setTimeout(() => area.classList.remove('shake'), 400);
-        // 明确告诉用户正确答案（不只是给提示），方便学习
-        const hintEl = $('type-hint');
-        hintEl.innerHTML = `正确答案是：<b class="text-green-600 text-lg">${correctKey}</b>${/ñ/i.test(correctKey) ? ' <span class="text-xs text-gray-500">（没西语键盘输 n 也算对）</span>' : ''}`;
-        setTimeout(() => {
-          input.disabled = false; input.value = ''; input.focus();
-          submit.disabled = false;
-          submit.classList.remove('btn-danger'); submit.classList.add('btn-primary');
-          submit.style.background = '';
-          submit.textContent = '检查'; hintEl.innerHTML = '';
-        }, 3000);
+        setTimeout(() => speak(w.es), 500);
+        // 用 w.es 显示原始大小写，correctKey 是小写的不能当范本
+        lessonFooterResult(false, '正确拼法：' + w.es,
+          w.zh + (/[ñáéíóúü]/i.test(w.es) ? ' · 没有西语键盘时输 n / 不打重音也算对' : ''));
       }
     };
-    submit.addEventListener('click', check);
-    input.addEventListener('keypress', e => { if (e.key === 'Enter') check(); });
+
+    // 有输入就能提交，不再强制"必须先听发音"
+    const sync = () => {
+      if (input.value.trim()) lessonFooterArm('检查', check);
+      else { $('lesson-action').disabled = true; footerHandler = null; }
+    };
+    input.addEventListener('input', sync);
+    input.addEventListener('keypress', e => {
+      if (e.key === 'Enter' && input.value.trim() && !input.disabled) { e.preventDefault(); check(); }
+    });
+    hintEl.innerHTML = '<span class="text-gray-400">写完点下面的「检查」</span>';
   } else if (q.type === 'match') {
     let selected = { left: null, right: null };
-    let matched = 0;
+    let matched = 0, missed = 0;
     const tiles = area.querySelectorAll('.match-tile');
     const status = $('match-status');
-    const updateStatus = () => {
-      if (selected.left && selected.right) {
-        if (selected.left.dataset.id === selected.right.dataset.id) {
-          selected.left.classList.add('bg-green-100', 'border-green-500', 'opacity-50', 'pointer-events-none');
-          selected.right.classList.add('bg-green-100', 'border-green-500', 'opacity-50', 'pointer-events-none');
-          playSound('correct'); correctCount++; updateXp(3); matched++; flyFromEl(selected.right);
-          if (matched === q.options.length) {
-            status.textContent = '🎉 全部配对成功！';
-            setTimeout(nextQuestion, 1000);
-          } else status.textContent = `✓ 还剩 ${q.options.length - matched} 对`;
+    const judge = () => {
+      if (!selected.left || !selected.right) {
+        if (selected.left) status.textContent = '现在选右边的中文';
+        else if (selected.right) status.textContent = '现在选左边的西语';
+        return;
+      }
+      const l = selected.left, r = selected.right;
+      selected = { left: null, right: null };
+      if (l.dataset.id === r.dataset.id) {
+        [l, r].forEach(t => {
+          t.classList.remove('border-blue-500', 'bg-blue-50');
+          t.classList.add('bg-green-100', 'border-green-500', 'opacity-50', 'pointer-events-none');
+        });
+        playSound('correct'); haptic(15); correctCount++; updateXp(3); matched++; flyFromEl(r);
+        if (matched === q.options.length) {
+          status.textContent = '';
+          lessonFooterResult(true, missed === 0 ? '全部配对成功！' : '配完了！',
+            missed === 0 ? '一次就全对 🎯' : '错了 ' + missed + ' 次，多练两遍就记住了');
         } else {
-          playSound('wrong'); loseHeart();
-          area.classList.add('shake');
-          setTimeout(() => area.classList.remove('shake'), 400);
-          // 明确标红错的两个瓦片 + 告诉用户正确答案是什么
-          const leftText = selected.left.textContent.replace(/🔊/g, '').trim();
-          const rightText = selected.right.textContent.replace(/🔊/g, '').trim();
-          const correctPair = q.options.find(o => o.es === selected.left.dataset.id);
-          const correctZh = correctPair ? correctPair.zh : '?';
-          selected.left.classList.add('border-red-500', 'bg-red-50');
-          selected.right.classList.add('border-red-500', 'bg-red-50');
-          status.innerHTML = `<span class="text-red-500 font-bold">✗ "${leftText}" 不对应 "${rightText}"</span><br><span class="text-green-600 text-sm">正确：${leftText} → ${correctZh}</span>`;
-          setTimeout(() => {
-            [selected.left, selected.right].forEach(t => t.classList.remove('border-red-500', 'bg-red-50', 'border-blue-500', 'bg-blue-50'));
-            status.innerHTML = '点击左右两边的单词进行配对';
-          }, 2500);
+          status.textContent = '✓ 还剩 ' + (q.options.length - matched) + ' 对';
         }
-        selected = { left: null, right: null };
-      } else if (selected.left) status.textContent = '现在选右边的中文';
+      } else {
+        missed++;
+        playSound('wrong'); haptic([30, 60, 30]); loseHeart();
+        const w = q.options.find(o => o.es === l.dataset.id);
+        if (w) recordWrong(w, 'match');
+        [l, r].forEach(t => {
+          t.classList.remove('border-blue-500', 'bg-blue-50');
+          t.classList.add('border-red-500', 'bg-red-50');
+        });
+        status.innerHTML = '<span class="text-red-500 font-bold">✗ ' + l.dataset.id +
+          ' 的意思是「' + (w ? w.zh : '?') + '」</span>';
+        // 只闪红 1.2 秒就放开，不锁住孩子的手
+        setTimeout(() => {
+          [l, r].forEach(t => t.classList.remove('border-red-500', 'bg-red-50'));
+          if (matched < q.options.length) status.innerHTML = '点击左右两边的单词进行配对';
+        }, 1200);
+      }
     };
     tiles.forEach(t => {
       t.addEventListener('click', () => {
-        // 清除之前可能残留的红色样式（避免重复点击同一个）
+        if (t.classList.contains('pointer-events-none')) return;
+        haptic(8);
+        const side = t.dataset.side;
+        // 同一边再点一次 = 换选，不是配对
+        if (selected[side]) selected[side].classList.remove('border-blue-500', 'bg-blue-50');
         t.classList.remove('border-red-500', 'bg-red-50');
         t.classList.add('border-blue-500', 'bg-blue-50');
-        if (t.dataset.side === 'left') selected.left = t; else selected.right = t;
-        updateStatus();
+        selected[side] = t;
+        judge();
       });
     });
   } else if (q.type === 'order') {
     const result = $('order-result'), pool = $('order-pool');
-    const submit = $('order-submit'), clear = $('order-clear');
+    const clear = $('order-clear');
     const speaker = $('order-speaker');
-    const speakerHint = $('order-speaker-hint');
     const correct = q.word.example ? q.word.example.es : q.word.es;
-    let listened = false;
-    const updateSubmit = () => submit.disabled = !result.textContent.trim() || !listened;
-    const enableSubmit = () => { if (result.textContent.trim()) submit.disabled = false; };
-    const playAndMark = () => {
+
+    const playIt = () => {
       speak(speaker.dataset.text);
       speaker.classList.add('speaking');
+      speaker.classList.remove('recording-pulse');
       setTimeout(() => speaker.classList.remove('speaking'), 1500);
-      if (!listened) {
-        listened = true;
-        enableSubmit();
-        speakerHint.textContent = '✓ 已听过，继续排';
-        speaker.classList.remove('recording-pulse');
+    };
+    speaker.addEventListener('click', playIt);
+    setTimeout(playIt, 400);
+
+    const check = () => {
+      // 用瓦片 data-word 顺序比对，不要用 textContent（flex gap 不产生分隔符）
+      const built = Array.from(result.querySelectorAll('.order-tile')).map(t => t.dataset.word).join(' ');
+      const ok = built === correct;
+      pool.querySelectorAll('.order-tile').forEach(t => t.disabled = true);
+      result.querySelectorAll('.order-tile').forEach(t => t.disabled = true);
+      clear.disabled = true;
+      if (ok) {
+        playSound('correct'); haptic(20); correctCount++; updateXp(8); flyFromEl(result);
+        lessonFooterResult(true, '句子排对了！', correct);
+      } else {
+        playSound('wrong'); haptic([30, 60, 30]); loseHeart(); recordWrong(q.word, q.type);
+        area.classList.add('shake');
+        setTimeout(() => area.classList.remove('shake'), 400);
+        setTimeout(() => speak(correct), 500);
+        lessonFooterResult(false, '正确语序：' + correct,
+          q.word.example ? q.word.example.zh : q.word.zh);
       }
     };
-    speaker.addEventListener('click', playAndMark);
-    setTimeout(playAndMark, 400);
+
+    // 放了词就能提交，不再强制"必须先听整句"
+    const sync = () => {
+      if (result.querySelector('.order-tile')) lessonFooterArm('检查', check);
+      else { $('lesson-action').disabled = true; footerHandler = null; }
+    };
     pool.querySelectorAll('.order-tile').forEach(t => {
       t.addEventListener('click', () => {
-        if (t.classList.contains('opacity-30')) return;
-        const word = t.dataset.word;
-        const span = document.createElement('button');
-        span.className = 'order-tile btn-primary text-white px-4 py-2 rounded-xl font-bold';
-        span.textContent = word;
-        span.addEventListener('click', () => { span.remove(); t.classList.remove('opacity-30'); updateSubmit(); });
-        result.appendChild(span); t.classList.add('opacity-30'); updateSubmit();
+        if (t.disabled || t.classList.contains('opacity-30')) return;
+        haptic(8);
+        const chip = document.createElement('button');
+        chip.className = 'order-tile btn-primary text-white px-4 py-2 rounded-xl font-bold';
+        chip.dataset.word = t.dataset.word;
+        chip.textContent = t.dataset.word;
+        chip.addEventListener('click', () => {
+          if (chip.disabled) return;
+          chip.remove(); t.classList.remove('opacity-30'); sync();
+        });
+        result.appendChild(chip); t.classList.add('opacity-30'); sync();
       });
     });
     clear.addEventListener('click', () => {
       result.innerHTML = '';
       pool.querySelectorAll('.order-tile').forEach(t => t.classList.remove('opacity-30'));
-      updateSubmit();
-    });
-    submit.addEventListener('click', () => {
-      // 用瓦片的 data-word 顺序比对，不要用 textContent（flex gap 在 textContent 里不产生分隔符）
-      const builtWords = Array.from(result.querySelectorAll('.order-tile')).map(b => b.textContent);
-      const built = builtWords.join(' ');
-      const ok = built === correct;
-      submit.disabled = true; clear.disabled = true;
-      if (ok) {
-        submit.textContent = '✓ 完美！';
-        submit.classList.remove('btn-primary'); submit.classList.add('bg-green-500');
-        playSound('correct'); correctCount++; updateXp(8); flyFromEl(submit);
-        setTimeout(nextQuestion, 1000);
-      } else {
-        submit.textContent = '✗ 再试一次';
-        submit.classList.remove('btn-primary'); submit.classList.add('btn-danger');
-        playSound('wrong'); loseHeart();
-        area.classList.add('shake');
-        setTimeout(() => area.classList.remove('shake'), 400);
-        // 显示正确答案在 result 区，让用户对比
-        result.innerHTML = `<div class="text-base font-bold text-green-700">✓ 正确: ${correct}</div>`;
-        const zhMeaning = q.word.example ? q.word.example.zh : q.word.zh;
-        const tipEl = document.createElement('div');
-        tipEl.className = 'text-xs text-gray-500 w-full text-center mt-1';
-        tipEl.textContent = `${zhMeaning} · 3秒后可重试`;
-        result.appendChild(tipEl);
-        // 3 秒后清空让用户重试
-        setTimeout(() => {
-          submit.disabled = false; clear.disabled = false;
-          submit.textContent = '检查';
-          submit.classList.remove('btn-danger'); submit.classList.add('btn-primary');
-          clear.click();
-        }, 3000);
-      }
+      sync();
     });
   } else {
+    // 两步确认：先选中（只高亮，可反悔），再点底部"检查"才判定
     const buttons = area.querySelectorAll('.option-btn');
+    let chosen = null;
+    const check = () => {
+      if (!chosen) return;
+      buttons.forEach(b => b.disabled = true);
+      const ok = chosen.dataset.correct === 'true';
+      const w = q.word;
+      chosen.classList.remove('selected');
+      if (ok) {
+        chosen.classList.add('option-correct');
+        playSound('correct'); haptic(20); correctCount++; updateXp(5); flyFromEl(chosen);
+        lessonFooterResult(true, '太棒了！', `${w.es} = ${w.zh}`);
+      } else {
+        chosen.classList.add('option-wrong');
+        const correctBtn = Array.from(buttons).find(b => b.dataset.correct === 'true');
+        if (correctBtn) correctBtn.classList.add('option-correct');
+        playSound('wrong'); haptic([30, 60, 30]); loseHeart(); recordWrong(w, q.type);
+        area.classList.add('shake');
+        setTimeout(() => area.classList.remove('shake'), 400);
+        setTimeout(() => speak(w.es), 500);
+        lessonFooterResult(false, `正确答案：${w.es}`, `${w.zh}${w.example ? ' · ' + w.example.es : ''}`);
+      }
+    };
     buttons.forEach(btn => {
       btn.addEventListener('click', () => {
-        // 选之前先读出该选项（让用户听到自己选了什么）
-        const visible = btn.textContent.replace(/🔊/g, '').trim();
-        const opt = q.options.find(o => o.es === visible || o.zh === visible);
-        if (opt) speak(opt.es);
-        buttons.forEach(b => b.disabled = true);
-        const ok = btn.dataset.correct === 'true';
-        if (ok) {
-          btn.classList.add('option-correct');
-          playSound('correct'); correctCount++; updateXp(5); flyFromEl(btn);
-          setTimeout(nextQuestion, 1200);
-        } else {
-          btn.classList.add('option-wrong');
-          playSound('wrong'); loseHeart();
-          area.classList.add('shake');
-          setTimeout(() => area.classList.remove('shake'), 400);
-          // 找出正确答案并显示
-          const correctBtn = Array.from(buttons).find(b => b.dataset.correct === 'true');
-          if (correctBtn) correctBtn.classList.add('option-correct');
-          // 显示明确的"答错了"提示 + 继续按钮
-          const correctText = correctBtn ? correctBtn.textContent.replace(/🔊/g, '').trim() : '?';
-          const feedbackDiv = document.createElement('div');
-          feedbackDiv.className = 'mt-4 text-center';
-          feedbackDiv.innerHTML = `
-            <div class="text-red-500 font-bold text-lg mb-2">✗ 答错了</div>
-            <div class="text-gray-600 text-sm mb-3">正确答案是：<b class="text-green-600 text-lg">${correctText}</b></div>
-            <button id="wrong-continue" class="btn-primary font-bold py-3 px-8 rounded-2xl text-white text-base">继续 →</button>
-          `;
-          area.appendChild(feedbackDiv);
-          // 播放正确答案的发音
-          setTimeout(() => speak(q.word.es), 600);
-          $('wrong-continue').addEventListener('click', () => {
-            // 移除反馈 UI 但保留选项颜色（绿色正确 + 红色错误）
-            feedbackDiv.remove();
-            // 不重置按钮状态，让用户看到对错再点继续
-            nextQuestion();
-          });
-        }
+        if (btn.disabled) return;
+        buttons.forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        chosen = btn;
+        haptic(10);
+        // 听一下自己选的是什么（听力题除外，否则等于逐个试听把题作废）
+        const opt = q.options[+btn.dataset.idx];
+        if (opt && q.type !== 'listen') speak(opt.es);
+        lessonFooterArm('检查', check);
       });
     });
   }
@@ -3659,6 +3791,23 @@ $('back-from-story').addEventListener('click', () => showScreen('stories'));
 $('back-from-conversation').addEventListener('click', () => showScreen('conversations'));
 $('back-from-pronunciation').addEventListener('click', () => showScreen('learn'));
 $('back-from-pron-practice').addEventListener('click', () => { stopRecording(); showScreen('pronunciation'); });
+// 底部操作区按钮：检查 / 继续 都走这里
+$('lesson-action').addEventListener('click', () => { if (footerHandler) footerHandler(); });
+
+// 键盘：1-4 选选项，Enter 检查/继续（iPad 外接键盘和电脑都能用）
+document.addEventListener('keydown', e => {
+  if ($('screen-lesson').classList.contains('hidden')) return;
+  const typing = document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName);
+  if (e.key === 'Enter') {
+    const btn = $('lesson-action');
+    if (!btn.disabled) { e.preventDefault(); btn.click(); }
+  } else if (!typing && /^[1-4]$/.test(e.key)) {
+    const opts = document.querySelectorAll('#question-area .option-btn');
+    const target = opts[Number(e.key) - 1];
+    if (target && !target.disabled) { e.preventDefault(); target.click(); }
+  }
+});
+
 document.querySelectorAll('.nav-btn').forEach(b => {
   b.addEventListener('click', () => showScreen(b.dataset.screen));
 });

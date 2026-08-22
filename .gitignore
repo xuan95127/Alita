@@ -14,3 +14,5 @@ find-*.js
 fix-*.js
 show-*.js
 test-*.js
+server.js
+.claude/
