@@ -17,3 +17,5 @@ test-*.js
 server.js
 .claude/
 node_modules/
+_*.js
+_*.mjs
