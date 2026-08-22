@@ -642,3 +642,54 @@ npm i -D dictionary-es nspell     # 57346 条 RAE 词库
   这些本身就是要学的固定搭配，西语也正确，属于**有意保留**，不是待办。
 - 跨 profile 详细数据对比（PK 卡已覆盖基本需求）
 - 录音在 iOS Safari 的权限提示优化
+
+---
+
+## 15. 2026-08-22 第四轮（完整试玩，12 个 bug）
+
+这轮是**真的从建档案开始一路点到通关**才发现的，静态审查看不出来。
+下次改完，务必也真跑一遍，别只跑渲染回归。
+
+### 数值算错（最坑）
+- **准确率 167%**：`correctCount` 统计的是"得分事件"，配对题一题加 4 次，
+  拿它除以题数必然超 100%。更糟的是 `accuracy === 100` 因此永远不成立，
+  孩子全做对反而拿不到完美奖励。
+  → 新增 `questionsCorrect` 按「题」计；配对题要整题无错才算对。
+  **以后加新题型，记得同时维护 questionsCorrect。**
+- **XP 加两遍**：`updateXp()` 实时加过了，`finishLesson` 又 `xpEarned` 加一遍。
+  → 现在 `finishLesson` 只给完成奖励（10，满分 15），显示值用 `lessonXp + bonus`。
+- **双倍 XP 道具**：`updateXp()` 里每答对一题就 `doubleXp--`，答完第一题就没了。
+  → 挪到 `finishLesson`，一课扣一次。
+- **发音练习白拿 XP**：`prnScore * 8 + 20` 那个 +20 是无条件的，一路跳过也给。
+- **weeklyXp 漏加**：故事/对话/发音都没计入周榜，
+  爱读故事的孩子在兄妹 PK 上永远 0 分。三处都补了。
+
+### 档案相关（两个孩子共用 iPad 会踩到）
+- 点头像会**清空已输入的昵称**，而且选中的头像被覆盖回旧值 ——
+  根因是点头像时调 `openProfileWizard()` 整个重渲染。绝对不要这么写。
+- `refreshAfterSwitch()` 漏调 `updateProfileButton()`，
+  切换孩子后顶栏还显示上一个人。
+- 档案页的头像/昵称/冰冻/故事/对话 5 个字段从没被赋值过。
+- 档案页「完成关卡」用 `totalLessons`（含故事），和首页「通关」口径不一致。
+  → 统一用 `state.completedUnits.length`。
+
+### 交互
+- 红心归零时弹窗延时 800ms，这期间孩子照样能答完整课。
+  → `loseHeart()` 立刻禁用按钮，且 `lessonFooterResult()` 里
+  `btn.disabled = (state.hearts <= 0)` —— 否则它会把按钮又打开。
+- **原生 `confirm()` 全部替换成 `askConfirm()`**。iPad PWA 里原生对话框
+  样式突兀，而且会出现"点了没反应"。新增 `askConfirm` / `showTip`。
+- 故事理解题答错只闪 1.5 秒自动跳，改成显示答案 + 手动「继续」。
+- 录音按钮别用 `btn-danger`（红色 = 答错），已新增 `.btn-record`（蓝色）。
+- 问候语 22:00-23:59 没有分支，会停在默认 `¡Hola!`。
+
+### 音效（真机上会彻底哑掉）
+`playSound()` 原来**每播一次就 `new AudioContext()` 且从不关闭**。
+iOS Safari 并发上限只有 4~6 个，超了之后 `new` 抛异常被空 `catch` 吞掉——
+孩子答几题后音效就没了，还查不出原因。
+→ 改成共用一个 `_audioCtx`，并在 `suspended` 时 `resume()`（iOS 切回来会挂起）。
+顺带：`playSound` 原来不检查 `state.soundOn`，设置里的声音开关是摆设。
+
+### 试玩脚本（下次直接用）
+在 console 里同步跑完一整课，不要用 setTimeout —— 异步循环会和
+你后续的手动调用打架，读数会乱，看起来像"卡住"但其实是脚本自己在跑。
