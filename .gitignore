@@ -5,3 +5,12 @@ node_modules/
 .vercel
 .idea
 .vscode
+.playwright-cli/
+
+# 临时调试脚本
+audit-*.js
+check-*.js
+find-*.js
+fix-*.js
+show-*.js
+test-*.js
