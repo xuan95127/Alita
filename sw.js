@@ -4,15 +4,15 @@
 // 每次改完代码只要 npm run build:css && git push，
 // CACHE 名字里的时间戳由 build 脚本无关 —— 这里用内容无关的固定名，
 // 靠 index.html 的 network-first 策略保证永远拿到最新入口。
-const CACHE = 'mini-espanol-v4';
+const CACHE = 'mini-espanol-v5';
 
 // 首屏必需的静态资源
 const ASSETS = [
   './',
   './index.html',
-  './content.js',
-  './stories.js',
-  './tailwind.css',
+  './content.js?v=3',
+  './stories.js?v=3',
+  './tailwind.css?v=2',
   './manifest.json',
 ];
 
@@ -44,33 +44,24 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;   // 不碰跨域请求
 
-  // HTML 入口：网络优先，这样一发新版就能拿到；断网才回落缓存
-  if (req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname === '/') {
-    e.respondWith(
-      fetch(req)
-        .then(res => {
+  // 同源资源一律「网络优先，断网回落缓存」。
+  // 之前 JS/CSS 走 cache-first，会出现「新的 index.html 配旧的 content.js」——
+  // 页面代码更新了、题库还是老的，属于最难查的一类 bug。
+  // 这个 App 总共不到 500KB，网络优先的代价很小，但能保证版本永远一致。
+  e.respondWith(
+    fetch(req)
+      .then(res => {
+        if (res && res.status === 200 && res.type === 'basic') {
           const copy = res.clone();
           caches.open(CACHE).then(c => c.put(req, copy));
-          return res;
-        })
-        .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
-    );
-    return;
-  }
-
-  // 其余静态资源：先给缓存（秒开），同时后台悄悄更新
-  e.respondWith(
-    caches.match(req).then(cached => {
-      const network = fetch(req)
-        .then(res => {
-          if (res && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE).then(c => c.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+        }
+        return res;
+      })
+      .catch(() => caches.match(req).then(r => {
+        if (r) return r;
+        // 离线且没缓存时，导航请求兜底到首页
+        if (req.mode === 'navigate') return caches.match('./index.html');
+        return new Response('', { status: 504, statusText: 'offline' });
+      }))
   );
 });
