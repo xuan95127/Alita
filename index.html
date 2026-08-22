@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%2358CC02'/%3E%3Ctext x='96' y='130' font-size='100' text-anchor='middle'%3E%F0%9F%A6%89%3C/text%3E%3C/svg%3E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>🦉 Mini Español - 小小西语</title>
-<link rel="stylesheet" href="./tailwind.css?v=2">
+<link rel="stylesheet" href="./tailwind.css?v=3">
 <style>
   :root {
     --duo-green: #58CC02;
@@ -30,6 +30,11 @@
   .btn-primary:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 var(--duo-green-dark); }
   .btn-primary:disabled { opacity: 0.5; }
   .btn-danger { background: var(--duo-red); box-shadow: 0 4px 0 #d32f2f; transition: all 0.1s; color: white; }
+  /* 录音按钮用蓝色。原来复用 btn-danger（红色），
+     而红色在本 App 里代表「答错」，孩子会以为这个按钮不能点。*/
+  .btn-record { background: var(--duo-blue); box-shadow: 0 4px 0 #1899d6; transition: all 0.1s; color: white; }
+  .btn-record:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 #1899d6; }
+  .btn-record:disabled { opacity: 0.5; }
   .btn-secondary { background: white; color: #afafaf; box-shadow: 0 2px 0 #e5e5e5; border: 2px solid #e5e5e5; transition: all 0.1s; }
   .btn-secondary:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 #e5e5e5; }
   .progress-bar { transition: width 0.4s ease; }
@@ -613,7 +618,7 @@
     </div>
 
     <!-- 危险区 -->
-    <button onclick="if(confirm('清空所有学习数据？此操作无法撤销！')) { localStorage.clear(); location.reload(); }" class="w-full bg-red-50 text-red-500 rounded-2xl p-4 font-bold text-sm mt-2 border-2 border-red-100">
+    <button onclick="askConfirm('清空所有数据？', '所有学习者的进度都会被删除，无法撤销。', () => { localStorage.clear(); location.reload(); }, { emoji: '⚠️', yes: '全部清空', danger: true })" class="w-full bg-red-50 text-red-500 rounded-2xl p-4 font-bold text-sm mt-2 border-2 border-red-100">
       ⚠️ 清空所有数据
     </button>
   </section>
@@ -692,8 +697,8 @@
   </div>
 </div>
 
-<script src="./content.js?v=3"></script>
-<script src="./stories.js?v=3"></script>
+<script src="./content.js?v=4"></script>
+<script src="./stories.js?v=4"></script>
 <script>
 // ==================== 发音练习课程 ====================
 const PRONUNCIATION_LESSONS = [
@@ -884,6 +889,9 @@ function defaultState() {
 
 let currentLesson = null, lessonQuestions = [], currentQuestionIdx = 0;
 let correctCount = 0, lessonStartTime = 0, currentUnitWords = [];
+// correctCount 统计的是"得分事件"（配对题一题会加 4 次），不能拿它算准确率。
+// questionsCorrect 按「题」计，lessonXp 记本课实得 XP（避免结算时重复累加）。
+let questionsCorrect = 0, lessonXp = 0;
 
 function loadFamily() {
   try {
@@ -983,6 +991,10 @@ function switchProfile(id) {
 }
 
 function refreshAfterSwitch() {
+  // 顶栏的昵称+头像必须一起刷 —— 漏了这行会导致
+  // 新建档案 / 切换孩子之后顶栏还显示上一个人，看着像切换没生效
+  updateProfileButton();
+  renderProfileMenu();
   updateTopBar();
   updateDaily();
   updateHomeStats();
@@ -998,13 +1010,17 @@ function refreshAfterSwitch() {
 
 function deleteCurrentProfile() {
   if (family.profiles.length <= 1) {
-    alert('至少要保留一个学习者哦');
+    showTip('不能删啦', '至少要保留一个学习者哦。', '🙅');
     return;
   }
   const id = family.activeProfileId;
   const profile = family.profiles.find(p => p.id === id);
   if (!profile) return;
-  if (!confirm(`确定要删除「${profile.name}」的所有进度吗？此操作无法撤销。`)) return;
+  askConfirm(`删除「${profile.name}」？`, '这个学习者的全部进度都会没有，而且找不回来。',
+    () => doDeleteProfile(id), { emoji: '🗑️', yes: '删除', danger: true });
+}
+
+function doDeleteProfile(id) {
   try { localStorage.removeItem(STORAGE_KEY_PROFILE(id)); } catch (e) {}
   family.profiles = family.profiles.filter(p => p.id !== id);
   family.activeProfileId = family.profiles[0].id;
@@ -1328,7 +1344,15 @@ function importData(event) {
     try {
       const data = JSON.parse(e.target.result);
       if (!data.family || !data.profiles) throw new Error('文件格式不对');
-      if (!confirm('导入会覆盖当前进度，确定？')) return;
+      // 导入会覆盖当前进度，先问一句
+      if (!window.__importConfirmed) {
+        askConfirm('导入备份？', '会覆盖当前的学习进度，确定吗？', () => {
+          window.__importConfirmed = true;
+          importData({ target: { files: [file] } });
+          window.__importConfirmed = false;
+        }, { emoji: '📥', yes: '导入', danger: true });
+        return;
+      }
       // 恢复 family
       localStorage.setItem('mini-espanol-family-v1', JSON.stringify(data.family));
       // 恢复每个 profile state
@@ -1360,19 +1384,37 @@ function initRecognition() {
   return r;
 }
 
+// 音效共用一个 AudioContext。
+// 原来每播一次就 new 一个且从不关闭 —— iOS Safari 并发上限只有 4~6 个，
+// 超了之后 new 会抛异常被空 catch 吞掉，孩子答几题后音效就彻底哑了。
+let _audioCtx = null;
+function getAudioCtx() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  if (!_audioCtx) {
+    try { _audioCtx = new AC(); } catch (e) { return null; }
+  }
+  // iOS 上标签页切回来时 context 会被挂起，要唤醒
+  if (_audioCtx.state === 'suspended') { try { _audioCtx.resume(); } catch (e) {} }
+  return _audioCtx;
+}
+
 function playSound(type) {
+  if (state && state.soundOn === false) return;   // 设置里的「声音效果」开关原来是摆设
+  const ctx = getAudioCtx();
+  if (!ctx) return;
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const beep = (freq, at, dur, vol) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, ctx.currentTime + at);
+      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + at + dur);
+      o.start(ctx.currentTime + at);
+      o.stop(ctx.currentTime + at + dur);
+    };
     if (type === 'correct') {
-      [523, 659, 784].forEach((f, i) => {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.connect(g); g.connect(ctx.destination);
-        o.frequency.value = f;
-        g.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.08);
-        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.08 + 0.15);
-        o.start(ctx.currentTime + i * 0.08);
-        o.stop(ctx.currentTime + i * 0.08 + 0.15);
-      });
+      [523, 659, 784].forEach((f, i) => beep(f, i * 0.08, 0.15, 0.15));
     } else if (type === 'wrong') {
       const o = ctx.createOscillator(), g = ctx.createGain();
       o.connect(g); g.connect(ctx.destination);
@@ -1382,15 +1424,7 @@ function playSound(type) {
       g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
       o.start(); o.stop(ctx.currentTime + 0.3);
     } else if (type === 'complete') {
-      [523, 659, 784, 1047].forEach((f, i) => {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.connect(g); g.connect(ctx.destination);
-        o.frequency.value = f;
-        g.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.1);
-        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.1 + 0.3);
-        o.start(ctx.currentTime + i * 0.1);
-        o.stop(ctx.currentTime + i * 0.1 + 0.3);
-      });
+      [523, 659, 784, 1047].forEach((f, i) => beep(f, i * 0.1, 0.3, 0.15));
     }
   } catch (e) {}
 }
@@ -1553,6 +1587,31 @@ function showReminder() {
   }
 }
 
+// 应用内确认框，替代原生 confirm()。
+// 原生对话框在 iPad PWA 里样式突兀，某些场景还会被直接抑制导致"点了没反应"。
+function askConfirm(title, message, onYes, opts) {
+  const o = opts || {};
+  window.__confirmYes = () => { closeModal(); onYes(); };
+  showModal(`
+    <div class="text-center">
+      <div class="text-4xl mb-2">${o.emoji || '🤔'}</div>
+      <h3 class="text-xl font-bold text-gray-800 mb-1">${title}</h3>
+      <p class="text-sm text-gray-600 mb-5">${message}</p>
+      <button onclick="window.__confirmYes()" class="w-full font-bold py-3 rounded-2xl text-white ${o.danger ? 'btn-danger' : 'btn-primary'}">${o.yes || '确定'}</button>
+      <button onclick="closeModal()" class="w-full btn-secondary font-bold py-2.5 rounded-2xl mt-2 text-sm">${o.no || '再想想'}</button>
+    </div>`);
+}
+
+function showTip(title, message, emoji) {
+  showModal(`
+    <div class="text-center">
+      <div class="text-4xl mb-2">${emoji || '💡'}</div>
+      <h3 class="text-xl font-bold text-gray-800 mb-1">${title}</h3>
+      <p class="text-sm text-gray-600 mb-5">${message}</p>
+      <button onclick="closeModal()" class="w-full btn-primary font-bold py-3 rounded-2xl text-white">好的</button>
+    </div>`);
+}
+
 function showModal(html) { $('modal-content').innerHTML = html; $('modal').classList.remove('hidden'); }
 function closeModal() { $('modal').classList.add('hidden'); }
 
@@ -1628,17 +1687,29 @@ function openProfileWizard(prefill) {
   // 渲染头像选择器
   const grid = $('wizard-avatars');
   grid.innerHTML = '';
+  const SEL = 'bg-green-100 ring-2 ring-green-500 scale-110';
+  const UNSEL = 'bg-gray-50';
+  const paint = () => grid.querySelectorAll('button').forEach(b => {
+    const on = b.textContent === wizardSelectedAvatar;
+    b.className = 'text-3xl p-2 rounded-xl transition ' + (on ? SEL : UNSEL);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
   AVATAR_SET.forEach(a => {
     const btn = document.createElement('button');
-    btn.className = `text-3xl p-2 rounded-xl transition ${a === wizardSelectedAvatar ? 'bg-green-100 ring-2 ring-green-500 scale-110' : 'bg-gray-50 hover:bg-gray-100'}`;
+    btn.type = 'button';
     btn.textContent = a;
+    // 只切样式，不能重渲染整个向导 ——
+    // 原来这里调 openProfileWizard() 重来一遍，会把已经输入的昵称清空、
+    // 并且把刚选中的头像覆盖回旧值（选了等于没选）。
     btn.onclick = () => {
       wizardSelectedAvatar = a;
       $('wizard-emoji').textContent = a;
-      openProfileWizard(prefill); // 简单粗暴重渲染
+      paint();
+      haptic(8);
     };
     grid.appendChild(btn);
   });
+  paint();
   // 标题
   if (wizardMode === 'first') {
     $('wizard-title').textContent = '¡Bienvenido!';
@@ -1949,6 +2020,7 @@ function updateHomeStats() {
   else if (hour < 14) greet = '中午好 🌞';
   else if (hour < 18) greet = '下午好';
   else if (hour < 22) greet = '晚上好 🌙';
+  else greet = '不早了，学一小会儿就睡 🌙';   // 22:00-23:59 原来没有分支，会停在 ¡Hola!
   $('home-greeting').textContent = greet;
 }
 
@@ -2521,7 +2593,7 @@ function renderStorySentence() {
         <button id="story-listen" class="flex-1 bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-bold py-3 px-4 rounded-2xl text-base flex items-center justify-center gap-2 transition-all">
           <span class="text-xl">🔊</span> 听
         </button>
-        <button id="story-record" class="flex-1 btn-danger text-white font-bold py-3 px-4 rounded-2xl text-base flex items-center justify-center gap-2">
+        <button id="story-record" class="flex-1 btn-record text-white font-bold py-3 px-4 rounded-2xl text-base flex items-center justify-center gap-2">
           <span class="text-xl">🎤</span> 跟我读
         </button>
       </div>
@@ -2589,7 +2661,7 @@ function startStoryRecording(s) {
             <div class="text-sm text-gray-500 mt-1">目标：<b>${s.es}</b></div>
             <div class="text-sm text-yellow-700 mb-2">相似度 ${Math.round(sim * 100)}%（需 50%）</div>
             <div class="flex gap-2 justify-center">
-              <button id="story-retry" class="btn-danger text-white font-bold py-2 px-4 rounded-xl text-sm">🎤 重试</button>
+              <button id="story-retry" class="btn-record text-white font-bold py-2 px-4 rounded-xl text-sm">🎤 重试</button>
               <button id="story-skip" class="btn-secondary font-bold py-2 px-4 rounded-xl text-sm">跳过</button>
             </div>
           </div>
@@ -2633,11 +2705,22 @@ function renderStoryQuestion() {
         setTimeout(() => { storyQuestionIdx++; renderStoryQuestion(); }, 1000);
       } else {
         btn.classList.add('option-wrong');
-        playSound('wrong');
+        playSound('wrong'); haptic([30, 60, 30]);
+        let rightText = '';
         document.querySelectorAll('.story-option').forEach(b => {
-          if (parseInt(b.dataset.idx) === q.answer) b.classList.add('option-correct');
+          if (parseInt(b.dataset.idx) === q.answer) {
+            b.classList.add('option-correct');
+            rightText = b.textContent.trim();
+          }
         });
-        setTimeout(() => { storyQuestionIdx++; renderStoryQuestion(); }, 1500);
+        // 原来只闪 1.5 秒就自动跳走，孩子来不及看清正确答案。
+        // 改成显示答案 + 让孩子自己点「继续」。
+        const box = document.createElement('div');
+        box.className = 'mt-5 bg-red-50 border-l-4 border-red-400 rounded-xl p-3 text-left';
+        box.innerHTML = '<div class="text-sm font-bold text-red-600 mb-2">💡 正确答案：' + rightText + '</div>' +
+          '<button id="story-q-next" class="w-full btn-primary font-bold py-2.5 rounded-xl text-white text-sm">继续 →</button>';
+        $('story-content').querySelector('.text-center').appendChild(box);
+        $('story-q-next').addEventListener('click', () => { storyQuestionIdx++; renderStoryQuestion(); });
       }
     });
   });
@@ -2657,8 +2740,10 @@ function finishStory() {
       <button id="back-to-stories" class="btn-primary px-6 py-3 rounded-2xl font-bold">返回故事列表</button>
     </div>
   `;
-  state.totalXp += storyScore * 5 + 10;
-  state.todayXp += storyScore * 5 + 10;
+  const storyXp = storyScore * 5 + 10;
+  state.totalXp += storyXp;
+  state.todayXp += storyXp;
+  state.weeklyXp += storyXp;   // 原来漏了：只读故事的孩子周榜永远是 0，PK 一直输
   state.totalLessons++; state.todayStories = (state.todayStories || 0) + 1;
   // 记录完成的 story
   if (!state.completedStories) state.completedStories = [];
@@ -2867,7 +2952,7 @@ function renderPronunciationItem() {
         <button id="prn-listen-slow" class="btn-secondary px-4 py-3 rounded-2xl font-bold flex items-center gap-1 text-sm" title="慢速播放">
           🐢
         </button>
-        <button id="prn-record" class="btn-danger px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
+        <button id="prn-record" class="btn-record text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
           🎤 跟我读
         </button>
       </div>
@@ -2939,7 +3024,7 @@ function handlePronunciationRecord(item) {
             <div class="text-sm text-gray-500 mt-1">目标：${item.text}</div>
             <div class="flex gap-2 justify-center mt-3">
               <button id="prn-listen-again" class="btn-primary px-4 py-2 rounded-xl font-bold">🔊 再听一遍</button>
-              <button id="prn-retry" class="btn-danger px-4 py-2 rounded-xl font-bold">🎤 重录</button>
+              <button id="prn-retry" class="btn-record px-4 py-2 rounded-xl font-bold">🎤 重录</button>
               <button id="prn-skip" class="btn-secondary px-4 py-2 rounded-xl font-bold text-sm">跳过</button>
             </div>
           </div>
@@ -2955,20 +3040,24 @@ function handlePronunciationRecord(item) {
 function finishPronunciationLesson() {
   const total = prnLesson.items.length;
   const acc = Math.round((prnScore / total) * 100);
+  // 完成奖励只在真的练过时才给。原来写死 +20，
+  // 孩子一路点「跳过」也能白拿 20 XP。
+  const prnXp = prnScore * 8 + (prnScore > 0 ? 10 : 0);
   $('prn-content').innerHTML = `
     <div class="text-center bounce-in">
       <div class="text-6xl mb-3">${acc >= 80 ? '🏆' : '💪'}</div>
       <h2 class="text-2xl font-bold text-gray-800 mb-2">${acc >= 80 ? '¡Excelente!' : '¡Sigue practicando!'}</h2>
       <p class="text-gray-600 mb-2">通过 ${prnScore} / ${total} 题 (${acc}%)</p>
       <div class="bg-yellow-50 rounded-2xl p-4 mb-4 max-w-xs mx-auto">
-        <div class="text-3xl font-bold text-yellow-600">+${prnScore * 8 + 20} XP</div>
+        <div class="text-3xl font-bold text-yellow-600">+${prnXp} XP</div>
         <div class="text-sm text-gray-500">${acc >= 80 ? '完美通关！' : '继续努力哦'}</div>
       </div>
       <button id="prn-back-list" class="btn-primary px-6 py-3 rounded-2xl font-bold">返回课程列表</button>
     </div>
   `;
-  state.totalXp += prnScore * 8 + 20;
-  state.todayXp += prnScore * 8 + 20;
+  state.totalXp += prnXp;
+  state.todayXp += prnXp;
+  state.weeklyXp += prnXp;   // 原来漏了，发音练习的分进不了兄妹 PK 榜
   state.totalLessons++; state.todayLessons = (state.todayLessons || 0) + 1;
   bumpStreak();
   state.lastActiveDate = new Date().toDateString();
@@ -3016,7 +3105,7 @@ function renderConvLine() {
               <button id="conv-listen" class="flex-1 bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-bold py-3 px-4 rounded-2xl text-base flex items-center justify-center gap-2">
                 <span class="text-xl">🔊</span> 听
               </button>
-              <button id="conv-record" class="flex-1 btn-danger text-white font-bold py-3 px-4 rounded-2xl text-base flex items-center justify-center gap-2">
+              <button id="conv-record" class="flex-1 btn-record text-white font-bold py-3 px-4 rounded-2xl text-base flex items-center justify-center gap-2">
                 <span class="text-xl">🎤</span> 跟读
               </button>
             </div>
@@ -3052,7 +3141,7 @@ function renderConvLine() {
           <button id="conv-listen" class="flex-1 bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-800 font-bold py-3 px-4 rounded-2xl text-base flex items-center justify-center gap-2">
             <span class="text-xl">🔊</span> 听
           </button>
-          <button id="conv-record" class="flex-1 btn-danger text-white font-bold py-3 px-4 rounded-2xl text-base flex items-center justify-center gap-2">
+          <button id="conv-record" class="flex-1 btn-record text-white font-bold py-3 px-4 rounded-2xl text-base flex items-center justify-center gap-2">
             <span class="text-xl">🎤</span> 跟读
           </button>
         </div>
@@ -3113,7 +3202,7 @@ function startConvRecording(targetText, feedbackText) {
             <div class="text-xs text-gray-500">目标：<b>${targetText}</b></div>
             <div class="text-xs text-yellow-700">相似度 ${Math.round(sim * 100)}%</div>
             <div class="flex gap-2 justify-center mt-2">
-              <button id="conv-retry" class="btn-danger text-white font-bold py-1 px-3 rounded-lg text-xs">🎤 重试</button>
+              <button id="conv-retry" class="btn-record text-white font-bold py-1 px-3 rounded-lg text-xs">🎤 重试</button>
               <button id="conv-skip-pron" class="btn-secondary font-bold py-1 px-3 rounded-lg text-xs">跳过</button>
             </div>
           </div>
@@ -3142,6 +3231,7 @@ function finishConversation() {
   `;
   state.totalXp += 20;
   state.todayXp += 20;
+  state.weeklyXp += 20;        // 同上，对话的分也要进周榜
   state.totalLessons++; state.todayConvs = (state.todayConvs || 0) + 1;
   // 记录完成的 conv
   if (!state.completedConversations) state.completedConversations = [];
@@ -3345,12 +3435,21 @@ function renderQuests() {
 function renderProfile() {
   const wrongEl = $('wrong-count');
   if (wrongEl) wrongEl.textContent = (state.wrongAnswers || []).length;
+  // 这几个元素原来从没被赋过值，档案页永远显示写死的「🦉 学习者」和 0
+  const p = getActiveProfile();
+  $('profile-avatar-big').textContent = p.avatar;
+  $('profile-name-big').textContent = p.name;
+  $('profile-freezes').textContent = state.streakFreezes || 0;
+  $('profile-stories').textContent = (state.completedStories || []).length;
+  $('profile-convs').textContent = (state.completedConversations || []).length;
   $('profile-level').textContent = Math.floor(state.totalXp / 100) + 1;
   $('profile-xp').textContent = state.totalXp % 100;
   $('profile-streak').textContent = state.streak;
   $('profile-total-xp').textContent = state.totalXp;
   $('profile-words').textContent = state.wordsLearned;
-  $('profile-lessons').textContent = state.totalLessons;
+  // 用 completedUnits 而不是 totalLessons —— 后者把读故事、练对话也算进去了，
+  // 和首页「通关」以及「初学者」成就的口径对不上
+  $('profile-lessons').textContent = state.completedUnits.length;
   const list = $('achievements-list');
   list.innerHTML = '';
   ACHIEVEMENTS.forEach(a => {
@@ -3401,7 +3500,7 @@ document.querySelectorAll('.buy-btn').forEach(btn => {
 
 function startLesson(unit, isPractice = false) {
   currentLesson = { ...unit, isPractice };
-  currentQuestionIdx = 0; correctCount = 0;
+  currentQuestionIdx = 0; correctCount = 0; questionsCorrect = 0; lessonXp = 0;
   lessonStartTime = Date.now();
   currentUnitWords = getUnitWords(unit);
   lessonQuestions = generateQuestions(currentUnitWords, isPractice, unit);
@@ -3587,7 +3686,9 @@ function lessonFooterResult(ok, title, detail) {
   f.classList.add(ok ? 'state-correct' : 'state-wrong');
   btn.classList.toggle('wrong', !ok);
   btn.textContent = '继续';
-  btn.disabled = false;
+  // 红心已经归零时不能放行 —— loseHeart() 里禁用了按钮，
+  // 但这里晚一步执行会把它又打开，孩子就能在补心弹窗出现前继续答。
+  btn.disabled = (state.hearts <= 0);
   fb.classList.remove('hidden');
   fb.innerHTML = `
     <div class="flex items-start gap-3 mb-3">
@@ -3821,7 +3922,7 @@ function bindQuestionEvents(q, correctKey, area) {
       const w = q.word;
       if (ok) {
         input.classList.add('text-green-600');
-        playSound('correct'); haptic(20); correctCount++; updateXp(5); flyFromEl(input); clearWrong(w);
+        playSound('correct'); haptic(20); correctCount++; questionsCorrect++; updateXp(5); flyFromEl(input); clearWrong(w);
         lessonFooterResult(true, '拼对了！', w.es + ' = ' + w.zh);
       } else {
         input.classList.add('text-red-500');
@@ -3865,6 +3966,7 @@ function bindQuestionEvents(q, correctKey, area) {
         });
         playSound('correct'); haptic(15); correctCount++; updateXp(3); matched++; flyFromEl(r);
         if (matched === q.options.length) {
+          if (missed === 0) questionsCorrect++;   // 整题无错才算做对
           status.textContent = '';
           lessonFooterResult(true, missed === 0 ? '全部配对成功！' : '配完了！',
             missed === 0 ? '一次就全对 🎯' : '错了 ' + missed + ' 次，多练两遍就记住了');
@@ -3925,7 +4027,7 @@ function bindQuestionEvents(q, correctKey, area) {
       result.querySelectorAll('.order-tile').forEach(t => t.disabled = true);
       clear.disabled = true;
       if (ok) {
-        playSound('correct'); haptic(20); correctCount++; updateXp(8); flyFromEl(result); clearWrong(q.word);
+        playSound('correct'); haptic(20); correctCount++; questionsCorrect++; updateXp(8); flyFromEl(result); clearWrong(q.word);
         lessonFooterResult(true, '句子排对了！', correct);
       } else {
         playSound('wrong'); haptic([30, 60, 30]); loseHeart(); recordWrong(q.word, q.type);
@@ -3974,7 +4076,7 @@ function bindQuestionEvents(q, correctKey, area) {
       chosen.classList.remove('selected');
       if (ok) {
         chosen.classList.add('option-correct');
-        playSound('correct'); haptic(20); correctCount++; updateXp(5); flyFromEl(chosen); clearWrong(w);
+        playSound('correct'); haptic(20); correctCount++; questionsCorrect++; updateXp(5); flyFromEl(chosen); clearWrong(w);
         lessonFooterResult(true, '太棒了！', `${w.es} = ${w.zh}`);
       } else {
         chosen.classList.add('option-wrong');
@@ -4009,9 +4111,16 @@ function loseHeart() {
     $('lesson-hearts').textContent = state.hearts;
     $('hearts').textContent = state.hearts;
     if (state.hearts === 0) {
+      // 心归零必须立刻拦住，不能只是延时弹个窗 ——
+      // 原来那 800ms 里孩子照样能往下答，最后课都做完了
+      // 「要不要补心」的弹窗才盖到结算页上。
+      const act = $('lesson-action');
+      if (act) act.disabled = true;
       setTimeout(() => {
+        // 课已经结束（比如最后一题答错）就别再弹了
+        if ($('screen-lesson').classList.contains('hidden')) return;
         showModal(`<h3 class="text-2xl font-bold mb-2 text-red-500">💔 红心用完了</h3><p class="text-gray-600 mb-2">用 50 宝石补充，或休息一下明天再来！</p><button onclick="buyHearts()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">💎 50 补充</button><button onclick="endLessonByHearts()" class="btn-secondary px-4 py-2 rounded-2xl font-bold mt-2 w-full">结束课程</button>`);
-      }, 800);
+      }, 500);
     }
   }
 }
@@ -4019,7 +4128,11 @@ function loseHeart() {
 function buyHearts() {
   if (state.gems >= 50) {
     state.gems -= 50; state.hearts = 5; saveState();
-    updateTopBar(); $('lesson-hearts').textContent = state.hearts; closeModal();
+    updateTopBar(); $('lesson-hearts').textContent = state.hearts;
+    // 解锁答题按钮（心归零时被禁用了）
+    const act = $('lesson-action');
+    if (act && footerHandler) act.disabled = false;
+    closeModal();
   } else {
     showModal(`<h3 class="text-xl font-bold mb-2">💎 宝石不足</h3><p class="text-gray-600">完成更多任务来赚宝石！</p><button onclick="closeModal()" class="btn-primary font-bold py-2 px-6 rounded-2xl mt-4 w-full">好的</button>`);
   }
@@ -4029,8 +4142,10 @@ function endLessonByHearts() { closeModal(); finishLesson(true); }
 
 function updateXp(amount) {
   const doubled = state.doubleXp > 0 ? amount * 2 : amount;
-  state.totalXp += doubled; state.todayXp += doubled;
-  if (state.doubleXp > 0) state.doubleXp--;
+  state.totalXp += doubled; state.todayXp += doubled; state.weeklyXp += doubled;
+  lessonXp += doubled;
+  // 双倍 XP 是"按课"生效的道具，原来每答对一题就扣 1，
+  // 结果答完第一题道具就没了。改到 finishLesson 里一课扣一次。
   saveState(); updateTopBar(); updateDaily();
 }
 
@@ -4042,11 +4157,15 @@ function nextQuestion() {
 
 function finishLesson(endedEarly = false) {
   const total = lessonQuestions.length;
-  const idx = endedEarly ? Math.max(1, currentQuestionIdx) : total;
-  const accuracy = Math.round((correctCount / idx) * 100);
-  let xpEarned = correctCount * 5;
-  if (state.doubleXp > 0) xpEarned *= 2;
-  xpEarned = Math.max(5, xpEarned);
+  const answered = endedEarly ? Math.max(1, currentQuestionIdx) : total;
+  // 按「题」算准确率。原来拿 correctCount / 题数，配对题一题记 4 次，
+  // 会算出 167% 这种数字；更糟的是 accuracy === 100 永远不成立，
+  // 孩子全做对反而拿不到完美奖励。
+  const accuracy = Math.min(100, Math.round((questionsCorrect / answered) * 100));
+  // 答题过程中 updateXp() 已经实时加过分了，这里只给「完成奖励」，不能再把全部重算一遍
+  let bonus = endedEarly ? 0 : (accuracy === 100 ? 15 : 10);
+  if (bonus > 0 && state.doubleXp > 0) bonus *= 2;
+  const xpEarned = lessonXp + bonus;
   const timeSpent = Math.round((Date.now() - lessonStartTime) / 1000);
 
   let justCrowned = false;
@@ -4073,8 +4192,8 @@ function finishLesson(endedEarly = false) {
   if (hour >= 22 || hour < 5) state.nightLearner = true;
   if (hour < 7) state.earlyLearner = true;
   state.lastActiveDate = new Date().toDateString();
-  state.totalXp += xpEarned; state.todayXp += xpEarned; state.weeklyXp += xpEarned; state.weeklyLessons += 1;
-  if (state.doubleXp > 0) state.doubleXp = Math.max(0, state.doubleXp - 1);
+  state.totalXp += bonus; state.todayXp += bonus; state.weeklyXp += bonus; state.weeklyLessons += 1;
+  if (state.doubleXp > 0) state.doubleXp = Math.max(0, state.doubleXp - 1);   // 一课扣一次
   if (accuracy === 100) state.gems += 5;
   saveState();
 
@@ -4129,7 +4248,8 @@ function finishLesson(endedEarly = false) {
 }
 
 $('exit-lesson').addEventListener('click', () => {
-  if (confirm('确定要退出吗？进度会丢失哦。')) showScreen('learn');
+  askConfirm('要退出这节课吗？', '这节课的进度不会保存哦。', () => showScreen('learn'),
+    { emoji: '🚪', yes: '退出', no: '继续学', danger: true });
 });
 $('back-home').addEventListener('click', () => showScreen('learn'));
 $('next-lesson').addEventListener('click', () => {

@@ -4,15 +4,15 @@
 // 每次改完代码只要 npm run build:css && git push，
 // CACHE 名字里的时间戳由 build 脚本无关 —— 这里用内容无关的固定名，
 // 靠 index.html 的 network-first 策略保证永远拿到最新入口。
-const CACHE = 'mini-espanol-v5';
+const CACHE = 'mini-espanol-v6';
 
 // 首屏必需的静态资源
 const ASSETS = [
   './',
   './index.html',
-  './content.js?v=3',
-  './stories.js?v=3',
-  './tailwind.css?v=2',
+  './content.js?v=4',
+  './stories.js?v=4',
+  './tailwind.css?v=3',
   './manifest.json',
 ];
 
